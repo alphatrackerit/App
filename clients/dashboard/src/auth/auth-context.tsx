@@ -2,7 +2,8 @@ import { createContext, useCallback, useEffect, useMemo, useRef, useState, type 
 import { useQueryClient } from "@tanstack/react-query";
 import { tokenStore } from "@/auth/token-store";
 import { decodeJwt, isTokenExpired, type JwtClaims } from "@/auth/jwt";
-import { issueToken } from "@/auth/api";
+import { issueToken, issueMicrosoftToken } from "@/auth/api";
+import { signInWithMicrosoftPopup } from "@/auth/msal";
 import { refreshAccessToken } from "@/lib/api-client";
 import { endImpersonation, getMyPermissions, startImpersonation } from "@/api/identity";
 
@@ -42,6 +43,12 @@ export type AuthContextValue = {
   /** Truthy iff the current access token carries act_sub (impersonation mode). */
   impersonation: ImpersonationInfo | null;
   login: (input: { email: string; password: string; tenant: string }) => Promise<void>;
+  /**
+   * Sign in with Microsoft (Entra ID). Opens a popup, exchanges the ID token for an
+   * FSH session, and installs it. The tenant is derived server-side from the email
+   * domain, so no tenant input is required.
+   */
+  loginWithMicrosoft: () => Promise<void>;
   logout: () => void;
   /** Re-fetch the permission set for the signed-in user (e.g. after a role change). */
   refreshPermissions: () => Promise<void>;
@@ -248,6 +255,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [queryClient],
   );
 
+  const loginWithMicrosoft = useCallback(async () => {
+    // 1. Popup → Microsoft ID token. 2. Exchange for an FSH token pair (tenant
+    // derived server-side from the email domain).
+    const { idToken } = await signInWithMicrosoftPopup();
+    const tokens = await issueMicrosoftToken(idToken);
+
+    const claims = decodeJwt(tokens.accessToken);
+    if (!claims?.tenant) {
+      tokenStore.clear();
+      throw new Error("Microsoft sign-in did not resolve a tenant.");
+    }
+    // Defence-in-depth, mirroring password login: a root token must never land
+    // in the tenant dashboard.
+    if (claims.tenant === "root") {
+      tokenStore.clear();
+      throw new Error("SuperAdmin accounts must use the admin app. Sign in there instead.");
+    }
+
+    tokenStore.setTenant(claims.tenant);
+    tokenStore.setPermissions([]);
+    setPermissionsHydrated(false);
+    tokenStore.setTokens(tokens.accessToken, tokens.refreshToken);
+    queryClient.clear();
+  }, [queryClient]);
+
   const logout = useCallback(() => {
     tokenStore.clear();
     queryClient.clear();
@@ -327,12 +359,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       permissionsHydrated,
       impersonation,
       login,
+      loginWithMicrosoft,
       logout,
       beginImpersonation,
       stopImpersonation,
       refreshPermissions,
     }),
-    [user, isInitializing, permissionsHydrated, impersonation, login, logout, beginImpersonation, stopImpersonation, refreshPermissions],
+    [user, isInitializing, permissionsHydrated, impersonation, login, loginWithMicrosoft, logout, beginImpersonation, stopImpersonation, refreshPermissions],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

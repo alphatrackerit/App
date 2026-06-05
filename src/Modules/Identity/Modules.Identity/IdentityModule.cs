@@ -9,6 +9,7 @@ using FSH.Framework.Storage.Services;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Identity.Authorization;
 using FSH.Modules.Identity.Authorization.Jwt;
+using FSH.Modules.Identity.Authorization.MicrosoftEntra;
 using FSH.Modules.Identity.Contracts.Services;
 using FSH.Modules.Identity.Data;
 using FSH.Modules.Identity.Domain;
@@ -39,6 +40,7 @@ using FSH.Modules.Identity.Features.v1.Sessions.GetTenantSessions;
 using FSH.Modules.Identity.Features.v1.Sessions.GetUserSessions;
 using FSH.Modules.Identity.Features.v1.Sessions.RevokeAllSessions;
 using FSH.Modules.Identity.Features.v1.Sessions.RevokeSession;
+using FSH.Modules.Identity.Features.v1.Tokens.MicrosoftTokenGeneration;
 using FSH.Modules.Identity.Features.v1.Tokens.RefreshToken;
 using FSH.Modules.Identity.Features.v1.Tokens.TokenGeneration;
 using FSH.Modules.Identity.Features.v1.TwoFactor.Disable;
@@ -96,7 +98,13 @@ public class IdentityModule : IModule
         services.AddScoped<IRequestContextService, RequestContextService>();
         services.AddScoped<IRequestContext>(sp => sp.GetRequiredService<IRequestContextService>());
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<ITokenIssuanceService, TokenIssuanceService>();
         services.AddScoped<IImpersonationGrantService, ImpersonationGrantService>();
+
+        // "Sign in with Microsoft" (Entra ID) — opt-in per environment via MicrosoftEntraOptions.
+        // The validator is a singleton so OIDC metadata + JWKS are fetched once and cached.
+        services.AddOptions<MicrosoftEntraOptions>().BindConfiguration(nameof(MicrosoftEntraOptions));
+        services.AddSingleton<IMicrosoftTokenValidator, MicrosoftTokenValidator>();
 
         // User services - focused single-responsibility services
         services.AddTransient<IUserRegistrationService, UserRegistrationService>();
@@ -185,6 +193,7 @@ public class IdentityModule : IModule
 
         // tokens
         group.MapGenerateTokenEndpoint().AllowAnonymous().RequireRateLimiting("auth");
+        group.MapGenerateMicrosoftTokenEndpoint().AllowAnonymous().RequireRateLimiting("auth");
         group.MapRefreshTokenEndpoint().AllowAnonymous().RequireRateLimiting("auth");
 
         // The outbox is dispatched by the framework's OutboxDispatcherHostedService

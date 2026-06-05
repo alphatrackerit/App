@@ -172,6 +172,63 @@ public sealed class IdentityService : IIdentityService
         return (user.Id, claims);
     }
 
+    public async Task<(string Subject, IEnumerable<Claim> Claims)?>
+        ValidateExternalLoginAsync(string email, string tenantId, string provider, string providerKey, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tenantId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(provider);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerKey);
+
+        // The caller (Microsoft token handler) sets the tenant context before resolving this
+        // service from a child scope, so the UserManager/DbContext are scoped to the target tenant.
+        var tenant = GetValidatedTenant();
+        if (!string.Equals(tenant.Id, tenantId, StringComparison.Ordinal))
+        {
+            throw new UnauthorizedException();
+        }
+
+        var user = await _userManager.FindByEmailAsync(email.Trim().Normalize());
+        if (user is null)
+        {
+            // Link-only: never auto-provision an external sign-in into a tenant.
+            return null;
+        }
+
+        if (!user.IsActive)
+        {
+            throw new UnauthorizedException("user is deactivated");
+        }
+
+        ValidateTenantStatus(tenant);
+
+        // Link the external identity (idempotent). The provider verified the email, so confirm it.
+        var changed = false;
+        if (!user.EmailConfirmed)
+        {
+            user.EmailConfirmed = true;
+            changed = true;
+        }
+        if (!string.Equals(user.ObjectId, providerKey, StringComparison.Ordinal))
+        {
+            user.ObjectId = providerKey;
+            changed = true;
+        }
+        if (changed)
+        {
+            await _userManager.UpdateAsync(user);
+        }
+
+        var logins = await _userManager.GetLoginsAsync(user);
+        if (!logins.Any(l => l.LoginProvider == provider && l.ProviderKey == providerKey))
+        {
+            await _userManager.AddLoginAsync(user, new UserLoginInfo(provider, providerKey, provider));
+        }
+
+        var claims = await BuildUserClaimsAsync(user, tenant.Id, ct);
+        return (user.Id, claims);
+    }
+
     private AppTenantInfo GetValidatedTenant()
     {
         var tenant = _multiTenantContextAccessor!.MultiTenantContext.TenantInfo

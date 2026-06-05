@@ -23,3 +23,17 @@ export function issueToken(input: {
     skipAuth: true,
   });
 }
+
+/**
+ * Exchanges a Microsoft (Entra ID) ID token — obtained via MSAL — for an FSH
+ * token pair. No tenant header: the server derives the tenant from the verified
+ * email domain. Only existing, active users are accepted (link-only).
+ */
+export function issueMicrosoftToken(idToken: string) {
+  return apiFetch<TokenResponse>("/api/v1/identity/token/microsoft", {
+    method: "POST",
+    body: JSON.stringify({ idToken }),
+    headers: { "X-FSH-App": "dashboard" },
+    skipAuth: true,
+  });
+}

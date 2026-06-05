@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Sparkles, TimerOff } from "lucide-react";
 import { useAuth } from "@/auth/use-auth";
+import { isMicrosoftSignInEnabled } from "@/auth/msal";
 import { consumeSignedOutReason } from "@/auth/inactivity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,7 @@ type LocationState = { from?: { pathname: string } };
 // ────────────────────────────────────────────────────────────────────────
 
 export function LoginPage() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, loginWithMicrosoft } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as LocationState | null)?.from?.pathname ?? "/";
@@ -81,6 +82,28 @@ export function LoginPage() {
     setPassword(account.password);
     setTenant(account.tenant);
     void performLogin({ email: account.email, password: account.password, tenant: account.tenant });
+  };
+
+  const onMicrosoft = async () => {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await loginWithMicrosoft();
+      navigate(from, { replace: true });
+    } catch (err) {
+      const message =
+        err instanceof ApiRequestError
+          ? err.problem?.detail ?? err.problem?.title ?? err.message
+          : err instanceof Error
+            ? err.message
+            : "Microsoft sign-in failed";
+      // MSAL throws when the user simply closes the popup — that's not an error.
+      if (!/user_cancelled|popup_window_error|user closed|hash_empty_error/i.test(message)) {
+        setError(message);
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -226,6 +249,29 @@ export function LoginPage() {
           </div>
         </form>
 
+        {/* Microsoft sign-in — shown only when a client id is configured. */}
+        {isMicrosoftSignInEnabled() && (
+          <div className="mt-5">
+            <div className="relative my-5 flex items-center" aria-hidden>
+              <span className="h-px flex-1 bg-[var(--color-border)]" />
+              <span className="px-3 text-[11px] font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                or
+              </span>
+              <span className="h-px flex-1 bg-[var(--color-border)]" />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onMicrosoft}
+              disabled={submitting}
+              className="h-11 w-full gap-2.5 text-[14px] font-medium"
+            >
+              <MicrosoftLogo className="size-[17px]" />
+              <span>Continue with Microsoft</span>
+            </Button>
+          </div>
+        )}
+
         {/* Demo accounts — runtime-gated (staging on, prod off). */}
         {env.demoMode && (
           <div className="mt-7">
@@ -245,5 +291,17 @@ export function LoginPage() {
         <DemoAccountsDialog open={demoOpen} onOpenChange={setDemoOpen} onPick={onPickDemo} />
       )}
     </>
+  );
+}
+
+/** Microsoft's four-square brand mark (official colors). */
+function MicrosoftLogo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 21 21" aria-hidden="true">
+      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+      <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+    </svg>
   );
 }

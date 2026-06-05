@@ -33,4 +33,15 @@ public interface IIdentityService
     /// </summary>
     Task<(string Subject, IEnumerable<Claim> Claims)?>
         BuildClaimsForUserAsync(string userId, string tenantId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Link-only external sign-in (e.g. Microsoft / Entra). Resolves an existing, active user by
+    /// <paramref name="email"/> in the CURRENT tenant context (the caller must have established it
+    /// to <paramref name="tenantId"/>), links the external identity (<paramref name="provider"/> /
+    /// <paramref name="providerKey"/>), and returns the subject + claims. Returns null when no
+    /// matching active user exists — callers must NOT auto-provision. The external email is treated
+    /// as verified, so <c>EmailConfirmed</c> is not required (and is set on link).
+    /// </summary>
+    Task<(string Subject, IEnumerable<Claim> Claims)?>
+        ValidateExternalLoginAsync(string email, string tenantId, string provider, string providerKey, CancellationToken ct = default);
 }

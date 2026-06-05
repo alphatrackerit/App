@@ -15,6 +15,18 @@ type RuntimeConfig = {
   inactivityIdleMs: number;
   /** Warning-countdown length (ms) before auto sign-out. */
   inactivityWarningMs: number;
+  /**
+   * Microsoft Entra (Azure AD) SPA app-registration client id. Empty string
+   * hides the "Continue with Microsoft" button — the feature stays dark until
+   * an environment wires a client id into config.json.
+   */
+  msalClientId: string;
+  /**
+   * Microsoft Entra authority WITHOUT the trailing /v2.0 (MSAL appends it),
+   * e.g. https://login.microsoftonline.com/organizations (any work/school
+   * tenant) or .../{entraTenantId} (a single organization).
+   */
+  msalAuthority: string;
 };
 
 // Dashboard defaults: 20 minutes idle, then a 60-second warning.
@@ -41,6 +53,8 @@ export async function loadRuntimeConfig(): Promise<void> {
     demoMode: cfg.demoMode ?? false,
     inactivityIdleMs: positiveOr(cfg.inactivityIdleMs, DEFAULT_INACTIVITY_IDLE_MS),
     inactivityWarningMs: positiveOr(cfg.inactivityWarningMs, DEFAULT_INACTIVITY_WARNING_MS),
+    msalClientId: (cfg.msalClientId ?? "").trim(),
+    msalAuthority: (cfg.msalAuthority ?? "https://login.microsoftonline.com/organizations").replace(/\/$/, ""),
   };
 }
 
@@ -59,4 +73,6 @@ export const env = {
   get demoMode(): boolean { return get().demoMode; },
   get inactivityIdleMs(): number { return get().inactivityIdleMs; },
   get inactivityWarningMs(): number { return get().inactivityWarningMs; },
+  get msalClientId(): string { return get().msalClientId; },
+  get msalAuthority(): string { return get().msalAuthority; },
 };

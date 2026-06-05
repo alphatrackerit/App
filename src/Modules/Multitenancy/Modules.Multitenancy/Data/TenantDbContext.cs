@@ -23,6 +23,12 @@ public class TenantDbContext : EFCoreStoreDbContext<AppTenantInfo>
 
     public DbSet<TenantExpiryNotice> TenantExpiryNotices => Set<TenantExpiryNotice>();
 
+    /// <summary>
+    /// Email-domain → tenant mappings used by external sign-in (Microsoft/Entra) to pick
+    /// a tenant from the authenticated user's email domain. Part of the global catalog.
+    /// </summary>
+    public DbSet<TenantEmailDomain> TenantEmailDomains => Set<TenantEmailDomain>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);

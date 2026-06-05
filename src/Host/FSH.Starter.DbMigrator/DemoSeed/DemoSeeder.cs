@@ -15,6 +15,7 @@ using FSH.Modules.Identity.Data;
 using FSH.Modules.Identity.Domain;
 using FSH.Modules.Multitenancy.Contracts;
 using FSH.Modules.Multitenancy.Data;
+using FSH.Modules.Multitenancy.Domain;
 using FSH.Modules.Multitenancy.Provisioning;
 using FSH.Modules.Tickets.Contracts.Dtos;
 using FSH.Modules.Tickets.Data;
@@ -53,14 +54,16 @@ internal sealed class DemoSeeder
         Name: "Acme Corp",
         AdminEmail: "admin@acme.com",
         Issuer: "fsh.demo.acme",
-        PlanKey: "pro-annual");
+        PlanKey: "pro-annual",
+        EmailDomain: "acme.com");
 
     public static readonly DemoTenant Globex = new(
         Id: "globex",
         Name: "Globex",
         AdminEmail: "admin@globex.com",
         Issuer: "fsh.demo.globex",
-        PlanKey: "free");
+        PlanKey: "free",
+        EmailDomain: "globex.com");
 
     public DemoSeeder(IServiceProvider services, IConfiguration config, ILogger<DemoSeeder> logger)
     {
@@ -77,6 +80,7 @@ internal sealed class DemoSeeder
                 "Seed:DemoPassword must be configured (see appsettings.Development.json).");
 
         await EnsureDemoTenantsExistAsync(cancellationToken).ConfigureAwait(false);
+        await SeedTenantEmailDomainsAsync(cancellationToken).ConfigureAwait(false);
         await SeedRootSuperAdminAsync(cancellationToken).ConfigureAwait(false);
 
         foreach (var demo in new[] { Acme, Globex })
@@ -166,6 +170,38 @@ internal sealed class DemoSeeder
         provisioning.MarkCompleted();
 
         tenantDb.Add(provisioning);
+        await tenantDb.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Seeds email-domain → tenant mappings (acme.com → acme, globex.com → globex) so the
+    /// "Sign in with Microsoft" flow can derive the tenant from a user's email domain.
+    /// Idempotent: skips domains already mapped.
+    /// </summary>
+    private async Task SeedTenantEmailDomainsAsync(CancellationToken cancellationToken)
+    {
+        using var scope = _services.CreateScope();
+        var tenantDb = scope.ServiceProvider.GetRequiredService<TenantDbContext>();
+
+        foreach (var demo in new[] { Acme, Globex })
+        {
+            var normalized = TenantEmailDomain.Normalize(demo.EmailDomain);
+            var exists = await tenantDb.TenantEmailDomains
+                .AnyAsync(d => d.Domain == normalized, cancellationToken)
+                .ConfigureAwait(false);
+            if (exists)
+            {
+                continue;
+            }
+
+            tenantDb.TenantEmailDomains.Add(TenantEmailDomain.Create(demo.EmailDomain, demo.Id));
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "[demo-seed] mapped email domain '{Domain}' -> tenant '{TenantId}'", normalized, demo.Id);
+            }
+        }
+
         await tenantDb.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -699,7 +735,7 @@ internal sealed class DemoSeeder
 
     // ─── Demo content shapes ───────────────────────────────────────────
 
-    internal sealed record DemoTenant(string Id, string Name, string AdminEmail, string Issuer, string PlanKey);
+    internal sealed record DemoTenant(string Id, string Name, string AdminEmail, string Issuer, string PlanKey, string EmailDomain);
     internal sealed record DemoUser(
         string UserName,
         string Email,

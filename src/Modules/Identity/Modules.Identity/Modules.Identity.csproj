@@ -11,6 +11,7 @@
 	<ItemGroup>
 	  <PackageReference Include="Mediator.Abstractions" />
 	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+	  <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />
 	  <PackageReference Include="Finbuckle.MultiTenant.Identity.EntityFrameworkCore" />
 	  <PackageReference Include="UAParser" />
 	</ItemGroup>
@@ -24,6 +25,7 @@
 	  <ProjectReference Include="..\..\..\BuildingBlocks\Storage\Storage.csproj" />
 	  <ProjectReference Include="..\..\..\BuildingBlocks\Web\Web.csproj" />
 	  <ProjectReference Include="..\..\Auditing\Modules.Auditing.Contracts\Modules.Auditing.Contracts.csproj" />
+	  <ProjectReference Include="..\..\Multitenancy\Modules.Multitenancy.Contracts\Modules.Multitenancy.Contracts.csproj" />
 	  <ProjectReference Include="..\Modules.Identity.Contracts\Modules.Identity.Contracts.csproj" />
 	</ItemGroup>
 

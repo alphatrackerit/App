@@ -137,6 +137,13 @@ var api = builder.AddProject<Projects.FSH_Starter_Api>($"{appPrefix}-api")
     .WithEnvironment("Storage__S3__ForcePathStyle", "true")
     .WithEnvironment("Storage__S3__PublicBaseUrl", ReferenceExpression.Create($"{minioApiEndpoint}/{MinioBucket}"));
 
+// "Sign in with Microsoft" (Entra ID) is opt-in and OFF by default (see appsettings.json
+// MicrosoftEntraOptions). To enable in local dev, add three env vars to the api resource above —
+// MicrosoftEntraOptions__Enabled=true, MicrosoftEntraOptions__Authority=https://login.microsoftonline.com/organizations/v2.0,
+// MicrosoftEntraOptions__ClientId=<your-entra-spa-client-id> — and put the same client id in
+// clients/dashboard/public/config.json (msalClientId). The dashboard derives the tenant from the
+// user's email domain (seeded acme.com/globex.com for the demo tenants), link-only (no auto-provision).
+
 //#if (frontend)
 // Admin console (React + Vite). Target the API's HTTPS endpoint directly — UseHttpsRedirection's 307 to https is cross-origin and strips the Authorization header.
 builder.AddJavaScriptApp($"{appPrefix}-admin", "../../../clients/admin", "dev")

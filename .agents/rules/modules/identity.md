@@ -32,6 +32,14 @@ These are the model for background loops: stay alive, log with context, never sw
 
 Login `POST /api/v1/identity/token/issue` (header `X-FSH-App` enforces the operator/tenant app boundary). Refresh `POST /api/v1/identity/token/refresh` cross-checks subject. Session rows are written best-effort during login — failures log a warning and login still succeeds. Admin can't demote/deactivate the last admin or the root-tenant seed admin (guards in `UserRoleService`/`UserStatusService`).
 
+Both flows converge on **`ITokenIssuanceService.IssueAndPersistAsync(subject, claims, email)`** — the shared "authenticated user → tokens" path (issue + refresh-token persist + session + token-issued audit + `TokenGeneratedIntegrationEvent`). Handlers own only credential validation and the login-succeeded/failed audit. Don't inline issuance in a new flow — reuse this.
+
+## Microsoft sign-in (Entra ID) — dashboard only
+
+`POST /api/v1/identity/token/microsoft` exchanges a Microsoft **ID token** (the dashboard obtains it via MSAL `loginPopup`) for an FSH token pair. **No `tenant` header** — the tenant is **derived from the verified email domain** via `ITenantDomainResolver` (Multitenancy.Contracts, backed by the global `TenantEmailDomain` catalog table; seeded `acme.com`/`globex.com` for demo tenants). **Link-only**: `IIdentityService.ValidateExternalLoginAsync` resolves an existing active user by email and links the identity (`FshUser.ObjectId` + `AspNetUserLogins`); it never auto-provisions. Root-tenant domains are rejected (operator-only).
+
+The ID token is validated offline against Entra's JWKS by `IMicrosoftTokenValidator` (singleton, caches OIDC metadata). Config: `MicrosoftEntraOptions` (`Enabled`/`Authority`/`ClientId`), **off by default**. The handler resolves the tenant, then runs its tenant-scoped work in a **child scope** with `IMultiTenantContextSetter` set first (same pattern as `TenantService`/`DemoSeeder`) — constructor-injecting the Identity DbContext would capture the unresolved request context. Frontend: `clients/dashboard` only (`auth/msal.ts` wrapper, `loginWithMicrosoft` in auth-context, button gated on `env.msalClientId`).
+
 ## Tests
 
 `Identity.Tests` is the largest unit suite. When asserting a forwarded `CancellationToken`, assert the specific token (see `testing.md`).
