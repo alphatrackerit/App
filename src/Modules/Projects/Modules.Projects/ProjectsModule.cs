@@ -2,6 +2,7 @@ using Asp.Versioning;
 using FSH.Framework.Persistence;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Projects.Data;
+using FSH.Modules.Projects.Features.v1.Cashflow.GetCashflow;
 using FSH.Modules.Projects.Features.v1.Incomes.ConfirmIncome;
 using FSH.Modules.Projects.Features.v1.Incomes.CreateIncome;
 using FSH.Modules.Projects.Features.v1.Incomes.DeleteIncome;
@@ -106,5 +107,8 @@ public sealed class ProjectsModule : IModule
         group.MapGetNoteByIdEndpoint();
         group.MapUpdateNoteEndpoint();
         group.MapDeleteNoteEndpoint();
+
+        // Cash flow (aggregate)
+        group.MapGetCashflowEndpoint();
     }
 }

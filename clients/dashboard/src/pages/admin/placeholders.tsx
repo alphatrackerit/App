@@ -1,5 +1,4 @@
 import {
-  ArrowLeftRight,
   BarChart3,
   Building2,
   Flag,
@@ -51,10 +50,6 @@ function ComingSoon({ icon: Icon, title, subtitle }: { icon: LucideIcon; title: 
       </div>
     </div>
   );
-}
-
-export function FlujoDeCajaPage() {
-  return <ComingSoon icon={ArrowLeftRight} title="Flujo de caja" subtitle="Ingresos y pagos consolidados por proyecto y periodo." />;
 }
 
 export function GraficosPage() {

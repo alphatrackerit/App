@@ -115,7 +115,7 @@ const ClientesPage = lazyNamed(() => import("@/pages/admin/placeholders"), "Clie
 const PaisesPage = lazyNamed(() => import("@/pages/admin/placeholders"), "PaisesPage");
 const EstadosPage = lazyNamed(() => import("@/pages/admin/placeholders"), "EstadosPage");
 const EmpresasPage = lazyNamed(() => import("@/pages/admin/placeholders"), "EmpresasPage");
-const FlujoDeCajaPage = lazyNamed(() => import("@/pages/admin/placeholders"), "FlujoDeCajaPage");
+const FlujoDeCajaPage = lazyNamed(() => import("@/pages/projects/cashflow"), "FlujoDeCajaPage");
 const GraficosPage = lazyNamed(() => import("@/pages/admin/placeholders"), "GraficosPage");
 
 /**

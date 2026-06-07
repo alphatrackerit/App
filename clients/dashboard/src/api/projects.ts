@@ -233,3 +233,29 @@ export function updateNote(id: string, input: NoteInput): Promise<string> {
 export async function deleteNote(id: string): Promise<void> {
   await apiFetch<void>(`/api/v1/notes/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
+
+// ───────────────────────────────────────────────────────────────────────
+//  Cash flow (aggregate ledger for the Flujo de caja grid)
+// ───────────────────────────────────────────────────────────────────────
+
+export type CashflowEntry = {
+  id: string;
+  projectId: string | null;
+  date: string; // ISO date-time
+  amount: number;
+  description: string | null;
+  confirmed: boolean;
+  validated: boolean;
+};
+
+export type CashflowProject = { id: string; name: string };
+
+export type Cashflow = {
+  projects: CashflowProject[];
+  incomes: CashflowEntry[];
+  payments: CashflowEntry[];
+};
+
+export function getCashflow(): Promise<Cashflow> {
+  return apiFetch<Cashflow>("/api/v1/cashflow");
+}
