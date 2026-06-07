@@ -53,12 +53,26 @@ internal static class HttpBodyReader
         }
         catch (JsonException)
         {
-            // Not valid JSON; return UTF8 snippet as fallback
-            ms.Position = 0;
-            var text = Encoding.UTF8.GetString(ms.ToArray());
-            var snippet = text.Length > 2000 ? text[..2000] + ".(truncated)" : text;
-            return (new { text = snippet }, totalBytes);
+            // Not valid JSON; return a best-effort UTF8 snippet instead.
+            return TextFallback(ms, totalBytes);
         }
+        catch (InvalidOperationException)
+        {
+            // The structure parsed, but a JSON string value held bytes that aren't valid
+            // UTF-8 — JsonElement.GetString() throws "Cannot transcode invalid UTF-8 JSON
+            // text" rather than returning. Audit body capture is best-effort and runs in
+            // the request pipeline, so this must NEVER bubble out and fail the real request;
+            // fall back to a lenient snippet (invalid bytes become U+FFFD).
+            return TextFallback(ms, totalBytes);
+        }
+    }
+
+    private static (object? preview, int size) TextFallback(MemoryStream ms, int totalBytes)
+    {
+        ms.Position = 0;
+        var text = Encoding.UTF8.GetString(ms.ToArray());
+        var snippet = text.Length > 2000 ? text[..2000] + ".(truncated)" : text;
+        return (new { text = snippet }, totalBytes);
     }
 
     private static object? ToPlain(JsonElement e)
