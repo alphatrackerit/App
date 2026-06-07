@@ -116,7 +116,7 @@ const PaisesPage = lazyNamed(() => import("@/pages/admin/placeholders"), "Paises
 const EstadosPage = lazyNamed(() => import("@/pages/admin/placeholders"), "EstadosPage");
 const EmpresasPage = lazyNamed(() => import("@/pages/admin/placeholders"), "EmpresasPage");
 const FlujoDeCajaPage = lazyNamed(() => import("@/pages/projects/cashflow"), "FlujoDeCajaPage");
-const GraficosPage = lazyNamed(() => import("@/pages/admin/placeholders"), "GraficosPage");
+const GraficosPage = lazyNamed(() => import("@/pages/projects/graficos"), "GraficosPage");
 
 /**
  * RouteFallback — what shows while a lazy chunk is downloading. Mirrors
