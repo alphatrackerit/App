@@ -12,6 +12,10 @@
     <Project Path="BuildingBlocks/Web/Web.csproj" />
   </Folder>
   <Folder Name="/Modules/" />
+  <Folder Name="/Modules/Administration/">
+    <Project Path="Modules/Administration/Modules.Administration.Contracts/Modules.Administration.Contracts.csproj" />
+    <Project Path="Modules/Administration/Modules.Administration/Modules.Administration.csproj" />
+  </Folder>
   <Folder Name="/Modules/Auditing/">
     <Project Path="Modules/Auditing/Modules.Auditing.Contracts/Modules.Auditing.Contracts.csproj" />
     <Project Path="Modules/Auditing/Modules.Auditing/Modules.Auditing.csproj" Id="2764205b-8725-43a7-b499-67b98959ad50" />

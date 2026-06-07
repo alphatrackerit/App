@@ -8,22 +8,35 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { clientsApi, companiesApi, countriesApi, statusesApi, suppliersApi } from "@/api/administration";
 import { PageHero } from "@/components/list";
+import { CatalogPage } from "./catalog-page";
 
-// Lightweight "coming soon" surface for AlphaTracker sections whose backend
-// isn't built yet (Administración catalogs, Empresas, Flujo de caja, Gráficos).
-// They live in the nav + routes so the app shell is complete; each renders a
-// calm placeholder until its module ships.
+// ── Real catalog pages (Administración) ─────────────────────────────────
 
-function ComingSoon({
-  icon: Icon,
-  title,
-  subtitle,
-}: {
-  icon: LucideIcon;
-  title: string;
-  subtitle: string;
-}) {
+export function ClientesPage() {
+  return <CatalogPage title="Clientes" unit="cliente" icon={Users} queryKey="clients" api={clientsApi} description="Catálogo de clientes para asociar a los proyectos." />;
+}
+
+export function ProveedoresPage() {
+  return <CatalogPage title="Proveedores" unit="proveedor" icon={Truck} queryKey="suppliers" api={suppliersApi} description="Catálogo de proveedores para asociar a los pagos." />;
+}
+
+export function PaisesPage() {
+  return <CatalogPage title="Países" unit="país" icon={Flag} queryKey="countries" api={countriesApi} description="Catálogo de países." />;
+}
+
+export function EstadosPage() {
+  return <CatalogPage title="Estados" unit="estado" icon={ListChecks} queryKey="statuses" api={statusesApi} description="Catálogo de estados para proyectos, ingresos y pagos." />;
+}
+
+export function EmpresasPage() {
+  return <CatalogPage title="Empresas" unit="empresa" icon={Building2} queryKey="companies" api={companiesApi} description="Catálogo de empresas (sociedades)." />;
+}
+
+// ── Still-placeholder sections (no backend yet) ─────────────────────────
+
+function ComingSoon({ icon: Icon, title, subtitle }: { icon: LucideIcon; title: string; subtitle: string }) {
   return (
     <div className="space-y-6">
       <PageHero eyebrow="Módulos" title={title} subtitle={subtitle} />
@@ -38,26 +51,6 @@ function ComingSoon({
       </div>
     </div>
   );
-}
-
-export function ProveedoresPage() {
-  return <ComingSoon icon={Truck} title="Proveedores" subtitle="Catálogo de proveedores para asociar a los pagos." />;
-}
-
-export function ClientesPage() {
-  return <ComingSoon icon={Users} title="Clientes" subtitle="Catálogo de clientes para asociar a los proyectos." />;
-}
-
-export function PaisesPage() {
-  return <ComingSoon icon={Flag} title="Países" subtitle="Catálogo de países." />;
-}
-
-export function EstadosPage() {
-  return <ComingSoon icon={ListChecks} title="Estados" subtitle="Catálogo de estados para proyectos, ingresos y pagos." />;
-}
-
-export function EmpresasPage() {
-  return <ComingSoon icon={Building2} title="Empresas" subtitle="Selecciona y administra las empresas (sociedades)." />;
 }
 
 export function FlujoDeCajaPage() {
