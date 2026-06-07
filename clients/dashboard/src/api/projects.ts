@@ -61,6 +61,10 @@ export type ProjectInput = {
   cost?: number | null;
   forecastCost?: number | null;
   profit?: number | null;
+  clientId?: string | null;
+  countryId?: string | null;
+  companyId?: string | null;
+  statusId?: string | null;
 };
 
 export function searchProjects(params: PagedParams = {}): Promise<PagedResponse<ProjectDto>> {

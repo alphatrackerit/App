@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
+  Combobox,
+  type ComboboxOption,
   EntityEmpty,
   EntityInitialsAvatar,
   EntityListCard,
@@ -36,6 +38,14 @@ import {
   EntitySearch,
   Field,
 } from "@/components/list";
+import {
+  clientsApi,
+  companiesApi,
+  countriesApi,
+  statusesApi,
+  type CatalogApi,
+  type Lookup,
+} from "@/api/administration";
 import { describe } from "@/lib/list-helpers";
 
 const PAGE_SIZE = 20;
@@ -51,6 +61,10 @@ function toNum(s: string): number | null {
   if (t === "") return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
+}
+
+function toOptions(items: Lookup[] | undefined): ComboboxOption[] {
+  return (items ?? []).map((i) => ({ value: i.id, label: i.name, hint: i.code ?? undefined }));
 }
 
 type EditorState =
@@ -240,10 +254,23 @@ export function ProjectsPage() {
   );
 }
 
+function useCatalogOptions(key: string, api: CatalogApi, enabled: boolean) {
+  return useQuery({
+    queryKey: ["administration", key, "options"],
+    queryFn: () => api.search({ pageSize: 200, sortBy: "name", sortDir: "asc" }),
+    enabled,
+  });
+}
+
 function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: () => void }) {
   const isOpen = state.mode === "create" || state.mode === "edit";
   const project = state.mode === "edit" ? state.project : undefined;
   const queryClient = useQueryClient();
+
+  const clientsQ = useCatalogOptions("clients", clientsApi, isOpen);
+  const countriesQ = useCatalogOptions("countries", countriesApi, isOpen);
+  const companiesQ = useCatalogOptions("companies", companiesApi, isOpen);
+  const statusesQ = useCatalogOptions("statuses", statusesApi, isOpen);
 
   const initial = useMemo(
     () => ({
@@ -253,6 +280,10 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
       cost: project?.cost?.toString() ?? "",
       forecastCost: project?.forecastCost?.toString() ?? "",
       profit: project?.profit?.toString() ?? "",
+      clientId: project?.clientId ?? null,
+      countryId: project?.countryId ?? null,
+      companyId: project?.companyId ?? null,
+      statusId: project?.statusId ?? null,
     }),
     [project],
   );
@@ -263,6 +294,10 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
   const [cost, setCost] = useState(initial.cost);
   const [forecastCost, setForecastCost] = useState(initial.forecastCost);
   const [profit, setProfit] = useState(initial.profit);
+  const [clientId, setClientId] = useState<string | null>(initial.clientId);
+  const [countryId, setCountryId] = useState<string | null>(initial.countryId);
+  const [companyId, setCompanyId] = useState<string | null>(initial.companyId);
+  const [statusId, setStatusId] = useState<string | null>(initial.statusId);
 
   useEffect(() => {
     if (isOpen) {
@@ -272,6 +307,10 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
       setCost(initial.cost);
       setForecastCost(initial.forecastCost);
       setProfit(initial.profit);
+      setClientId(initial.clientId);
+      setCountryId(initial.countryId);
+      setCompanyId(initial.companyId);
+      setStatusId(initial.statusId);
     }
   }, [isOpen, initial]);
 
@@ -298,6 +337,10 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
       cost: toNum(cost),
       forecastCost: toNum(forecastCost),
       profit: toNum(profit),
+      clientId,
+      countryId,
+      companyId,
+      statusId,
     });
   };
 
@@ -310,7 +353,7 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
             <DialogDescription>
               {project
                 ? `Actualiza los datos de ${project.name}.`
-                : "Crea un proyecto. Los importes son opcionales."}
+                : "Crea un proyecto. Los importes y asociaciones son opcionales."}
             </DialogDescription>
           </DialogHeader>
 
@@ -334,6 +377,65 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
               </Field>
               <Field id="p-profit" label="Beneficio">
                 <Input id="p-profit" type="number" step="any" value={profit} onChange={(e) => setProfit(e.target.value)} placeholder="0" />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field id="p-client" label="Cliente">
+                <Combobox
+                  id="p-client"
+                  label="Cliente"
+                  variant="field"
+                  value={clientId}
+                  onChange={setClientId}
+                  options={toOptions(clientsQ.data?.items)}
+                  searchable
+                  clearable
+                  placeholder={clientsQ.isLoading ? "Cargando…" : "Sin asignar"}
+                  emptyOptionLabel="Sin asignar"
+                />
+              </Field>
+              <Field id="p-status" label="Estado">
+                <Combobox
+                  id="p-status"
+                  label="Estado"
+                  variant="field"
+                  value={statusId}
+                  onChange={setStatusId}
+                  options={toOptions(statusesQ.data?.items)}
+                  searchable
+                  clearable
+                  placeholder={statusesQ.isLoading ? "Cargando…" : "Sin asignar"}
+                  emptyOptionLabel="Sin asignar"
+                />
+              </Field>
+              <Field id="p-company" label="Empresa">
+                <Combobox
+                  id="p-company"
+                  label="Empresa"
+                  variant="field"
+                  value={companyId}
+                  onChange={setCompanyId}
+                  options={toOptions(companiesQ.data?.items)}
+                  searchable
+                  clearable
+                  placeholder={companiesQ.isLoading ? "Cargando…" : "Sin asignar"}
+                  emptyOptionLabel="Sin asignar"
+                />
+              </Field>
+              <Field id="p-country" label="País">
+                <Combobox
+                  id="p-country"
+                  label="País"
+                  variant="field"
+                  value={countryId}
+                  onChange={setCountryId}
+                  options={toOptions(countriesQ.data?.items)}
+                  searchable
+                  clearable
+                  placeholder={countriesQ.isLoading ? "Cargando…" : "Sin asignar"}
+                  emptyOptionLabel="Sin asignar"
+                />
               </Field>
             </div>
           </DialogBody>
