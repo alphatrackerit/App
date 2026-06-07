@@ -1,10 +1,16 @@
 import {
   Activity,
+  ArrowLeftRight,
+  BarChart3,
+  Briefcase,
+  Building2,
   CreditCard,
+  Flag,
   FolderOpen,
   FolderTree,
   HeartPulse,
   LayoutDashboard,
+  ListChecks,
   MessageCircle,
   Package,
   Receipt,
@@ -14,9 +20,11 @@ import {
   Tags,
   Ticket,
   Trash2,
+  Truck,
   Users,
   UsersRound,
   Wifi,
+  Wrench,
 } from "lucide-react";
 
 export type NavSpec = {
@@ -55,6 +63,28 @@ export const topNavBottom: NavSpec[] = [
 
 // Section accordion. Single-select — only one section open at a time.
 export const sections: NavSection[] = [
+  {
+    id: "proyectos",
+    caption: "Proyectos",
+    icon: Briefcase,
+    items: [
+      { to: "/projects", label: "Proyectos", icon: Briefcase },
+      { to: "/flujo-de-caja", label: "Flujo de caja", icon: ArrowLeftRight },
+      { to: "/graficos", label: "Gráficos", icon: BarChart3 },
+      { to: "/empresas", label: "Empresas", icon: Building2 },
+    ],
+  },
+  {
+    id: "administracion",
+    caption: "Administración",
+    icon: Wrench,
+    items: [
+      { to: "/admin/proveedores", label: "Proveedores", icon: Truck },
+      { to: "/admin/clientes", label: "Clientes", icon: Users },
+      { to: "/admin/paises", label: "Países", icon: Flag },
+      { to: "/admin/estados", label: "Estados", icon: ListChecks },
+    ],
+  },
   {
     id: "operations",
     caption: "Operations",

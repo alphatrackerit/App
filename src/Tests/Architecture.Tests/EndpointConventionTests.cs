@@ -256,6 +256,7 @@ public class EndpointConventionTests
                                name.StartsWith("End", StringComparison.Ordinal) ||
                                name.StartsWith("Enroll", StringComparison.Ordinal) ||
                                name.StartsWith("Verify", StringComparison.Ordinal) ||
+                               name.StartsWith("Validate", StringComparison.Ordinal) ||
                                name.StartsWith("Disable", StringComparison.Ordinal) ||
                                name.StartsWith("Enable", StringComparison.Ordinal) ||
                                name.StartsWith("Restore", StringComparison.Ordinal) ||

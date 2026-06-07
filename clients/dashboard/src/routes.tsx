@@ -105,6 +105,18 @@ const GroupDetailPage = lazyNamed(
 );
 const MyFilesPage = lazyNamed(() => import("@/pages/files/my-files"), "MyFilesPage");
 const ChatPage = lazyNamed(() => import("@/pages/chat/chat-page"), "ChatPage");
+const ProjectsPage = lazyNamed(() => import("@/pages/projects/projects"), "ProjectsPage");
+const ProjectDetailPage = lazyNamed(
+  () => import("@/pages/projects/project-detail"),
+  "ProjectDetailPage",
+);
+const ProveedoresPage = lazyNamed(() => import("@/pages/admin/placeholders"), "ProveedoresPage");
+const ClientesPage = lazyNamed(() => import("@/pages/admin/placeholders"), "ClientesPage");
+const PaisesPage = lazyNamed(() => import("@/pages/admin/placeholders"), "PaisesPage");
+const EstadosPage = lazyNamed(() => import("@/pages/admin/placeholders"), "EstadosPage");
+const EmpresasPage = lazyNamed(() => import("@/pages/admin/placeholders"), "EmpresasPage");
+const FlujoDeCajaPage = lazyNamed(() => import("@/pages/admin/placeholders"), "FlujoDeCajaPage");
+const GraficosPage = lazyNamed(() => import("@/pages/admin/placeholders"), "GraficosPage");
 
 /**
  * RouteFallback — what shows while a lazy chunk is downloading. Mirrors
@@ -208,6 +220,15 @@ export const router = createBrowserRouter([
             path: "catalog/products/:productId",
             element: withSuspense(<ProductDetailPage />),
           },
+          { path: "projects", element: withSuspense(<ProjectsPage />) },
+          { path: "projects/:projectId", element: withSuspense(<ProjectDetailPage />) },
+          { path: "empresas", element: withSuspense(<EmpresasPage />) },
+          { path: "flujo-de-caja", element: withSuspense(<FlujoDeCajaPage />) },
+          { path: "graficos", element: withSuspense(<GraficosPage />) },
+          { path: "admin/proveedores", element: withSuspense(<ProveedoresPage />) },
+          { path: "admin/clientes", element: withSuspense(<ClientesPage />) },
+          { path: "admin/paises", element: withSuspense(<PaisesPage />) },
+          { path: "admin/estados", element: withSuspense(<EstadosPage />) },
           {
             path: "settings",
             element: withSuspense(<SettingsLayout />),
