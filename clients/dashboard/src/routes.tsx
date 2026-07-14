@@ -110,11 +110,13 @@ const ProjectDetailPage = lazyNamed(
   () => import("@/pages/projects/project-detail"),
   "ProjectDetailPage",
 );
-const ProveedoresPage = lazyNamed(() => import("@/pages/admin/placeholders"), "ProveedoresPage");
+const ProveedoresPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "ProveedoresPage");
 const ClientesPage = lazyNamed(() => import("@/pages/admin/placeholders"), "ClientesPage");
 const PaisesPage = lazyNamed(() => import("@/pages/admin/placeholders"), "PaisesPage");
-const EstadosPage = lazyNamed(() => import("@/pages/admin/placeholders"), "EstadosPage");
+const EstadosPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "EstadosPage");
 const EmpresasPage = lazyNamed(() => import("@/pages/admin/placeholders"), "EmpresasPage");
+const SociedadesPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "SociedadesPage");
+const PrefijosPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "PrefijosPage");
 const FlujoDeCajaPage = lazyNamed(() => import("@/pages/projects/cashflow"), "FlujoDeCajaPage");
 const GraficosPage = lazyNamed(() => import("@/pages/projects/graficos"), "GraficosPage");
 const AvicolaPanelPage = lazyNamed(() => import("@/pages/avicola/avicola"), "AvicolaPanelPage");
@@ -243,6 +245,8 @@ export const router = createBrowserRouter([
           { path: "admin/clientes", element: withSuspense(<ClientesPage />) },
           { path: "admin/paises", element: withSuspense(<PaisesPage />) },
           { path: "admin/estados", element: withSuspense(<EstadosPage />) },
+          { path: "admin/sociedades", element: withSuspense(<SociedadesPage />) },
+          { path: "admin/prefijos", element: withSuspense(<PrefijosPage />) },
           {
             path: "settings",
             element: withSuspense(<SettingsLayout />),

@@ -101,6 +101,8 @@ export const sections: NavSection[] = [
       { to: "/admin/clientes", label: "Clientes", icon: Users, perm: "Permissions.Administration.Clients.View" },
       { to: "/admin/paises", label: "Países", icon: Flag, perm: "Permissions.Administration.Countries.View" },
       { to: "/admin/estados", label: "Estados", icon: ListChecks, perm: "Permissions.Administration.Statuses.View" },
+      { to: "/admin/sociedades", label: "Sociedades", icon: Building2, perm: "Permissions.Administration.Societies.View" },
+      { to: "/admin/prefijos", label: "Prefijos", icon: Tags, perm: "Permissions.Administration.Prefixes.View" },
     ],
   },
   {

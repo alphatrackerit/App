@@ -31,7 +31,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { EntityStatusBadge, Field, PageHero } from "@/components/list";
+import { Combobox, type ComboboxOption, EntityStatusBadge, Field, PageHero } from "@/components/list";
+import { suppliersApi } from "@/api/administration";
 import { describe, formatDate } from "@/lib/list-helpers";
 
 function money(n: number | null | undefined): string {
@@ -122,7 +123,7 @@ const LEDGER = {
   income: {
     queryKey: "incomes",
     search: searchIncomes,
-    create: (projectId: string, amount: number, description: string | null, date: string | null) =>
+    create: (projectId: string, amount: number, description: string | null, date: string | null, _supplierId: string | null) =>
       createIncome({ projectId, amount, description, date }),
     confirm: confirmIncome,
     validate: validateIncome,
@@ -131,8 +132,8 @@ const LEDGER = {
   payment: {
     queryKey: "payments",
     search: searchPayments,
-    create: (projectId: string, amount: number, description: string | null, date: string | null) =>
-      createPayment({ projectId, amount, description, date }),
+    create: (projectId: string, amount: number, description: string | null, date: string | null, supplierId: string | null) =>
+      createPayment({ projectId, amount, description, date, supplierId }),
     confirm: confirmPayment,
     validate: validatePayment,
     remove: deletePayment,
@@ -150,6 +151,12 @@ function LedgerSection({ kind, projectId, title }: { kind: "income" | "payment";
     queryFn: () => cfg.search({ projectId, pageSize: 100, sortBy: "date", sortDir: "desc" }) as Promise<PagedResponse<LedgerItem>>,
     enabled: projectId.length > 0,
     placeholderData: keepPreviousData,
+  });
+
+  const suppliersQ = useQuery({
+    queryKey: ["administration", "suppliers", "options"],
+    queryFn: () => suppliersApi.search({ pageSize: 200, sortBy: "name", sortDir: "asc" }),
+    enabled: kind === "payment",
   });
 
   const invalidate = () => {
@@ -254,9 +261,12 @@ function LedgerSection({ kind, projectId, title }: { kind: "income" | "payment";
       <AddAmountDialog
         open={adding}
         title={title}
+        supplierOptions={
+          kind === "payment" ? (suppliersQ.data?.items ?? []).map((s) => ({ value: s.id, label: s.name })) : undefined
+        }
         onClose={() => setAdding(false)}
-        onSubmit={(amount, description, date) =>
-          cfg.create(projectId, amount, description, date).then(() => {
+        onSubmit={(amount, description, date, supplierId) =>
+          cfg.create(projectId, amount, description, date, supplierId).then(() => {
             toast.success("Creado");
             invalidate();
             setAdding(false);
@@ -270,17 +280,20 @@ function LedgerSection({ kind, projectId, title }: { kind: "income" | "payment";
 function AddAmountDialog({
   open,
   title,
+  supplierOptions,
   onClose,
   onSubmit,
 }: {
   open: boolean;
   title: string;
+  supplierOptions?: ComboboxOption[];
   onClose: () => void;
-  onSubmit: (amount: number, description: string | null, date: string | null) => Promise<unknown>;
+  onSubmit: (amount: number, description: string | null, date: string | null, supplierId: string | null) => Promise<unknown>;
 }) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
+  const [supplierId, setSupplierId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
@@ -288,6 +301,7 @@ function AddAmountDialog({
       setAmount("");
       setDescription("");
       setDate("");
+      setSupplierId(null);
     }
   }, [open]);
 
@@ -296,7 +310,7 @@ function AddAmountDialog({
     const amt = toNum(amount);
     if (amt === null) return;
     setPending(true);
-    onSubmit(amt, description.trim() || null, dateToIso(date))
+    onSubmit(amt, description.trim() || null, dateToIso(date), supplierId)
       .catch((err) => toast.error("Error al crear", { description: describe(err) }))
       .finally(() => setPending(false));
   };
@@ -315,6 +329,22 @@ function AddAmountDialog({
             <Field id="a-date" label="Fecha">
               <Input id="a-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
+            {supplierOptions && (
+              <Field id="a-supplier" label="Proveedor">
+                <Combobox
+                  id="a-supplier"
+                  label="Proveedor"
+                  variant="field"
+                  value={supplierId}
+                  onChange={setSupplierId}
+                  options={supplierOptions}
+                  searchable
+                  clearable
+                  placeholder="Sin asignar"
+                  emptyOptionLabel="Sin asignar"
+                />
+              </Field>
+            )}
             <Field id="a-desc" label="Descripción">
               <Input id="a-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Anticipo, factura…" />
             </Field>

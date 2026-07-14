@@ -62,9 +62,11 @@ export type ProjectInput = {
   forecastCost?: number | null;
   profit?: number | null;
   clientId?: string | null;
+  societyId?: string | null;
   countryId?: string | null;
   companyId?: string | null;
   statusId?: string | null;
+  prefixId?: string | null;
 };
 
 export function searchProjects(params: PagedParams = {}): Promise<PagedResponse<ProjectDto>> {
@@ -166,7 +168,9 @@ export type PaymentInput = {
   description?: string | null;
   date?: string | null;
   percentage?: number | null;
+  supplierId?: string | null;
   projectId?: string | null;
+  confirmed?: boolean;
 };
 
 export function searchPayments(
@@ -262,4 +266,66 @@ export type Cashflow = {
 
 export function getCashflow(): Promise<Cashflow> {
   return apiFetch<Cashflow>("/api/v1/cashflow/cashflow");
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Daily summary (server-side report — spec §6)
+// ───────────────────────────────────────────────────────────────────────
+
+export type DailyIncomeDetail = {
+  id: string;
+  amount: number;
+  percentage: number;
+  status: string;
+  description: string | null;
+  confirmed: boolean;
+  validated: boolean;
+};
+
+export type DailyPaymentDetail = DailyIncomeDetail & { supplierName: string };
+
+export type DailySummaryDay = {
+  date: string; // ISO date-time, no offset
+  totalIncomes: number;
+  totalPayments: number;
+  result: number; // totalIncomes - totalPayments
+  accumulated: number; // running balance for this project
+  colorHex: string; // predominant-supplier color; "#ffffff00" if none
+  visualPriority: number; // that supplier's priority; int.MaxValue if none
+  incomeDetails: DailyIncomeDetail[];
+  paymentDetails: DailyPaymentDetail[];
+};
+
+export type DailySummaryProject = {
+  projectId: string;
+  projectName: string;
+  clientName: string;
+  companyName: string;
+  countryName: string;
+  statusName: string;
+  statusId: string | null;
+  days: DailySummaryDay[];
+};
+
+export type DailySummaryParams = {
+  from?: string;
+  to?: string;
+  companyIds?: string[];
+  projectIds?: string[];
+  statusIds?: string[];
+  onlyConfirmed?: boolean;
+  onlyValidated?: boolean;
+};
+
+export function getDailySummary(params: DailySummaryParams = {}): Promise<DailySummaryProject[]> {
+  const q = new URLSearchParams();
+  if (params.from) q.set("from", params.from);
+  if (params.to) q.set("to", params.to);
+  for (const id of params.companyIds ?? []) q.append("companyIds", id);
+  for (const id of params.projectIds ?? []) q.append("projectIds", id);
+  for (const id of params.statusIds ?? []) q.append("statusIds", id);
+  if (params.onlyConfirmed) q.set("onlyConfirmed", "true");
+  if (params.onlyValidated) q.set("onlyValidated", "true");
+  const s = q.toString();
+  return apiFetch<DailySummaryProject[]>(`/api/v1/cashflow/reports/daily-summary${s ? `?${s}` : ""}`);
 }

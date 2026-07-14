@@ -42,6 +42,8 @@ import {
   clientsApi,
   companiesApi,
   countriesApi,
+  prefixesApi,
+  societiesApi,
   statusesApi,
   type CatalogApi,
   type Lookup,
@@ -271,6 +273,16 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
   const countriesQ = useCatalogOptions("countries", countriesApi, isOpen);
   const companiesQ = useCatalogOptions("companies", companiesApi, isOpen);
   const statusesQ = useCatalogOptions("statuses", statusesApi, isOpen);
+  const societiesQ = useQuery({
+    queryKey: ["administration", "societies", "options"],
+    queryFn: () => societiesApi.search({ pageSize: 200, sortBy: "name", sortDir: "asc" }),
+    enabled: isOpen,
+  });
+  const categoriesQ = useQuery({
+    queryKey: ["administration", "prefixes", "categories"],
+    queryFn: () => prefixesApi.search({ pageSize: 200, sortBy: "name", sortDir: "asc", type: "Categoria", onlyActive: true }),
+    enabled: isOpen,
+  });
 
   const initial = useMemo(
     () => ({
@@ -284,6 +296,8 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
       countryId: project?.countryId ?? null,
       companyId: project?.companyId ?? null,
       statusId: project?.statusId ?? null,
+      societyId: project?.societyId ?? null,
+      prefixId: project?.prefixId ?? null,
     }),
     [project],
   );
@@ -298,6 +312,8 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
   const [countryId, setCountryId] = useState<string | null>(initial.countryId);
   const [companyId, setCompanyId] = useState<string | null>(initial.companyId);
   const [statusId, setStatusId] = useState<string | null>(initial.statusId);
+  const [societyId, setSocietyId] = useState<string | null>(initial.societyId);
+  const [prefixId, setPrefixId] = useState<string | null>(initial.prefixId);
 
   useEffect(() => {
     if (isOpen) {
@@ -311,6 +327,8 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
       setCountryId(initial.countryId);
       setCompanyId(initial.companyId);
       setStatusId(initial.statusId);
+      setSocietyId(initial.societyId);
+      setPrefixId(initial.prefixId);
     }
   }, [isOpen, initial]);
 
@@ -341,6 +359,8 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
       countryId,
       companyId,
       statusId,
+      societyId,
+      prefixId,
     });
   };
 
@@ -434,6 +454,34 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
                   searchable
                   clearable
                   placeholder={countriesQ.isLoading ? "Cargando…" : "Sin asignar"}
+                  emptyOptionLabel="Sin asignar"
+                />
+              </Field>
+              <Field id="p-society" label="Sociedad">
+                <Combobox
+                  id="p-society"
+                  label="Sociedad"
+                  variant="field"
+                  value={societyId}
+                  onChange={setSocietyId}
+                  options={(societiesQ.data?.items ?? []).map((s) => ({ value: s.id, label: s.name }))}
+                  searchable
+                  clearable
+                  placeholder={societiesQ.isLoading ? "Cargando…" : "Sin asignar"}
+                  emptyOptionLabel="Sin asignar"
+                />
+              </Field>
+              <Field id="p-category" label="Categoría">
+                <Combobox
+                  id="p-category"
+                  label="Categoría"
+                  variant="field"
+                  value={prefixId}
+                  onChange={setPrefixId}
+                  options={(categoriesQ.data?.items ?? []).map((p) => ({ value: p.id, label: p.name }))}
+                  searchable
+                  clearable
+                  placeholder={categoriesQ.isLoading ? "Cargando…" : "Sin asignar"}
                   emptyOptionLabel="Sin asignar"
                 />
               </Field>
