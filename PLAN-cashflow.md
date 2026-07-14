@@ -137,6 +137,12 @@ Registrar con `PermissionConstants.Register(CashflowPermissions.All)` en `Config
 ## 7. Plan por fases
 
 ### Fase 1 — Scaffold `Cashflow` + consolidación estructural (big-bang de frontera)
+> **✅ COMPLETADA (2026-07-14, rama `feat/cashflow-consolidation`, commit `5fbdf437`).** Verificado end-to-end:
+> compila (0 errores C#), migración `InitialCashflow` aplicada → schema `cashflow` con las 9 tablas en la BD;
+> `/api/v1/cashflow/*` responde 200 (autenticado) y las rutas viejas dan 404; Architecture.Tests 48/49
+> (la única falla es naming de endpoints de Avicola, preexistente). Pendiente aparte: audit NuGet (bloquea
+> CI; local resuelto en `iniciar.bat` con `NuGetAudit=false`) y el 500 de `/openapi` (paquete Microsoft.OpenApi).
+
 Mover no admite medias tintas: un `DbContext` se migra entero.
 1. Crear `Modules.Cashflow` + `.Contracts` (copiar 2 `.csproj` de un módulo existente y renombrar).
 2. Mover dominio/data/features/contracts de Projects **y** Administration al módulo nuevo; un solo
