@@ -15,7 +15,7 @@ public sealed record CashflowProjectDto(Guid Id, string Name);
 public sealed record CashflowEntryDto(
     Guid Id,
     Guid? ProjectId,
-    DateTimeOffset Date,
+    DateTime Date,
     decimal Amount,
     string? Description,
     bool Confirmed,

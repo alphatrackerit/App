@@ -152,7 +152,11 @@ function LedgerSection({ kind, projectId, title }: { kind: "income" | "payment";
     placeholderData: keepPreviousData,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: key });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: key });
+    // Also refresh the Flujo de caja grid + Gráficos, which read the ["cashflow"] ledger.
+    queryClient.invalidateQueries({ queryKey: ["cashflow"] });
+  };
 
   const confirm = useMutation({
     mutationFn: (id: string) => cfg.confirm(id),

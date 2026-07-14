@@ -41,8 +41,9 @@ function compact(n: number): string {
   return String(Math.round(n));
 }
 function ymd(iso: string): { y: number; m: number } {
+  // Local getters — the backend serializes dates without a timezone offset.
   const dt = new Date(iso);
-  return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1 };
+  return { y: dt.getFullYear(), m: dt.getMonth() + 1 };
 }
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
@@ -61,7 +62,7 @@ const axisTick = { fontSize: 11, fill: "var(--color-muted-foreground)" } as cons
 
 export function GraficosPage() {
   const now = new Date();
-  const [year, setYear] = useState<number>(now.getUTCFullYear());
+  const [year, setYear] = useState<number>(now.getFullYear());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const cashflowQ = useQuery({ queryKey: ["cashflow"], queryFn: getCashflow });
@@ -91,7 +92,7 @@ export function GraficosPage() {
           const map = sign === 1 ? monthInc : monthPay;
           map.set(m, (map.get(m) ?? 0) + e.amount);
         }
-        const d = new Date(e.date).getUTCDate();
+        const d = new Date(e.date).getDate();
         const ord = y * 10000 + m * 100 + d;
         byOrdNet.set(ord, (byOrdNet.get(ord) ?? 0) + sign * e.amount);
       }

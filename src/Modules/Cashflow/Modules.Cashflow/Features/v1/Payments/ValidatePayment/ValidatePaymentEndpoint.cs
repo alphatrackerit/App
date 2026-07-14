@@ -20,6 +20,6 @@ public static class ValidatePaymentEndpoint
                 })
             .WithName("ValidatePayment")
             .WithSummary("Mark a payment as validated")
-            .RequirePermission(CashflowPermissions.Payments.Validate);
+            .RequirePermission(CashflowPermissions.Facturacion.ValidatePago);
     }
 }

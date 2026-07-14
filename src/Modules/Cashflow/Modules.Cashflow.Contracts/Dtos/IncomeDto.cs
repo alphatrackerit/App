@@ -4,7 +4,7 @@ public sealed record IncomeDto(
     Guid Id,
     decimal Amount,
     string? Description,
-    DateTimeOffset? Date,
+    DateTime? Date,
     decimal? Percentage,
     Guid? ProjectId,
     Guid? StatusId,

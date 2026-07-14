@@ -15,7 +15,7 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
 
         builder.Property(x => x.Amount).HasColumnName("Importe").IsRequired();
         builder.Property(x => x.Description).HasColumnName("Descripcion");
-        builder.Property(x => x.Date).HasColumnName("Fecha").HasColumnType("timestamp with time zone");
+        builder.Property(x => x.Date).HasColumnName("Fecha").HasColumnType("timestamp without time zone");
         builder.Property(x => x.Percentage).HasColumnName("Porcentaje");
         builder.Property(x => x.SupplierId).HasColumnName("ProveedorId");
         builder.Property(x => x.ProjectId).HasColumnName("ProyectoId");

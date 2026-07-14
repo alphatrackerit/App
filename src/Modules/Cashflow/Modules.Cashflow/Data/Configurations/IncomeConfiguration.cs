@@ -15,11 +15,11 @@ public sealed class IncomeConfiguration : IEntityTypeConfiguration<Income>
 
         builder.Property(x => x.Amount).HasColumnName("Importe").IsRequired();
         builder.Property(x => x.Description).HasColumnName("Descripcion");
-        builder.Property(x => x.Date).HasColumnName("Fecha").HasColumnType("timestamp with time zone");
+        builder.Property(x => x.Date).HasColumnName("Fecha").HasColumnType("timestamp without time zone");
         builder.Property(x => x.Percentage).HasColumnName("Porcentaje");
         builder.Property(x => x.ProjectId).HasColumnName("ProyectoId");
         builder.Property(x => x.StatusId).HasColumnName("EstadoId");
-        builder.Property(x => x.Confirmed).HasColumnName("Confirmado").IsRequired();
+        builder.Property(x => x.Confirmed).HasColumnName("Confirmado").IsRequired().HasDefaultValue(false);
         builder.Property(x => x.Validated).HasColumnName("Validado").IsRequired().HasDefaultValue(false);
 
         // Owning project — same module/schema → real FK (ON DELETE NO ACTION). EF adds the FK index.

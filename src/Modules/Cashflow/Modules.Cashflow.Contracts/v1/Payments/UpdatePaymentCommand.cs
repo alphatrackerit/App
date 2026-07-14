@@ -6,7 +6,7 @@ public sealed record UpdatePaymentCommand(
     Guid PaymentId,
     decimal Amount,
     string? Description = null,
-    DateTimeOffset? Date = null,
+    DateTime? Date = null,
     decimal? Percentage = null,
     Guid? SupplierId = null,
     Guid? ProjectId = null,

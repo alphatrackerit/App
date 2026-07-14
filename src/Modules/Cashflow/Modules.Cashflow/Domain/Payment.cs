@@ -6,7 +6,9 @@ public sealed class Payment : AggregateRoot<Guid>
 {
     public decimal Amount { get; private set; }
     public string? Description { get; private set; }
-    public DateTimeOffset? Date { get; private set; }
+
+    /// <summary>Day of the payment, stored at midnight (Unspecified kind) so it never shifts a day.</summary>
+    public DateTime? Date { get; private set; }
     public decimal? Percentage { get; private set; }
 
     /// <summary>Soft reference to the external Proveedores catalog (indexed, no FK).</summary>
@@ -23,34 +25,40 @@ public sealed class Payment : AggregateRoot<Guid>
 
     private Payment() { }
 
+    /// <summary>Creates a payment. Respects the <paramref name="confirmed"/> flag (does not force false).</summary>
     public static Payment Create(
         decimal amount,
         string? description,
-        DateTimeOffset? date,
+        DateTime? date,
         decimal? percentage,
         Guid? supplierId,
         Guid? projectId,
-        Guid? statusId)
+        Guid? statusId,
+        bool confirmed)
     {
         return new Payment
         {
             Id = Guid.CreateVersion7(),
             Amount = amount,
             Description = description?.Trim(),
-            Date = date,
+            Date = NormalizeDate(date),
             Percentage = percentage,
             SupplierId = supplierId,
             ProjectId = projectId,
             StatusId = statusId,
-            Confirmed = false,
+            Confirmed = confirmed,
             Validated = false,
         };
     }
 
+    /// <summary>
+    /// Updates the editable fields. Deliberately does NOT touch <see cref="Confirmed"/> or
+    /// <see cref="Validated"/> — those change only via <see cref="SetConfirmed"/> / <see cref="SetValidated"/>.
+    /// </summary>
     public void Update(
         decimal amount,
         string? description,
-        DateTimeOffset? date,
+        DateTime? date,
         decimal? percentage,
         Guid? supplierId,
         Guid? projectId,
@@ -58,7 +66,7 @@ public sealed class Payment : AggregateRoot<Guid>
     {
         Amount = amount;
         Description = description?.Trim();
-        Date = date;
+        Date = NormalizeDate(date);
         Percentage = percentage;
         SupplierId = supplierId;
         ProjectId = projectId;
@@ -68,4 +76,8 @@ public sealed class Payment : AggregateRoot<Guid>
     public void SetConfirmed(bool value) => Confirmed = value;
 
     public void SetValidated(bool value) => Validated = value;
+
+    // Midnight + Unspecified kind: no timezone offset, so serialization never bumps the day.
+    private static DateTime? NormalizeDate(DateTime? date) =>
+        date is null ? null : DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Unspecified);
 }

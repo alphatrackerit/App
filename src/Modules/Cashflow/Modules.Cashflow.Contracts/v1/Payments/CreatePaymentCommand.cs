@@ -5,8 +5,9 @@ namespace FSH.Modules.Cashflow.Contracts.v1.Payments;
 public sealed record CreatePaymentCommand(
     decimal Amount,
     string? Description = null,
-    DateTimeOffset? Date = null,
+    DateTime? Date = null,
     decimal? Percentage = null,
     Guid? SupplierId = null,
     Guid? ProjectId = null,
-    Guid? StatusId = null) : ICommand<Guid>;
+    Guid? StatusId = null,
+    bool Confirmed = false) : ICommand<Guid>;

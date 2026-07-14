@@ -4,7 +4,7 @@ public sealed record PaymentDto(
     Guid Id,
     decimal Amount,
     string? Description,
-    DateTimeOffset? Date,
+    DateTime? Date,
     decimal? Percentage,
     Guid? SupplierId,
     Guid? ProjectId,

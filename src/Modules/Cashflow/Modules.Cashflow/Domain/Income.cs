@@ -6,7 +6,9 @@ public sealed class Income : AggregateRoot<Guid>
 {
     public decimal Amount { get; private set; }
     public string? Description { get; private set; }
-    public DateTimeOffset? Date { get; private set; }
+
+    /// <summary>Day of the collection, stored at midnight (Unspecified kind) so it never shifts a day.</summary>
+    public DateTime? Date { get; private set; }
     public decimal? Percentage { get; private set; }
 
     /// <summary>Owning project (same module → real FK, ON DELETE NO ACTION). Nullable per spec.</summary>
@@ -20,10 +22,11 @@ public sealed class Income : AggregateRoot<Guid>
 
     private Income() { }
 
+    /// <summary>Creates an income. Respects the <paramref name="confirmed"/> flag (does not force false).</summary>
     public static Income Create(
         decimal amount,
         string? description,
-        DateTimeOffset? date,
+        DateTime? date,
         decimal? percentage,
         Guid? projectId,
         Guid? statusId,
@@ -34,7 +37,7 @@ public sealed class Income : AggregateRoot<Guid>
             Id = Guid.CreateVersion7(),
             Amount = amount,
             Description = description?.Trim(),
-            Date = date,
+            Date = NormalizeDate(date),
             Percentage = percentage,
             ProjectId = projectId,
             StatusId = statusId,
@@ -43,25 +46,32 @@ public sealed class Income : AggregateRoot<Guid>
         };
     }
 
+    /// <summary>
+    /// Updates the editable fields. Deliberately does NOT touch <see cref="Confirmed"/> or
+    /// <see cref="Validated"/> — those billing flags change only via <see cref="SetConfirmed"/> /
+    /// <see cref="SetValidated"/>, so a normal edit never silently (un)confirms.
+    /// </summary>
     public void Update(
         decimal amount,
         string? description,
-        DateTimeOffset? date,
+        DateTime? date,
         decimal? percentage,
         Guid? projectId,
-        Guid? statusId,
-        bool confirmed)
+        Guid? statusId)
     {
         Amount = amount;
         Description = description?.Trim();
-        Date = date;
+        Date = NormalizeDate(date);
         Percentage = percentage;
         ProjectId = projectId;
         StatusId = statusId;
-        Confirmed = confirmed;
     }
 
     public void SetConfirmed(bool value) => Confirmed = value;
 
     public void SetValidated(bool value) => Validated = value;
+
+    // Midnight + Unspecified kind: no timezone offset, so serialization never bumps the day.
+    private static DateTime? NormalizeDate(DateTime? date) =>
+        date is null ? null : DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Unspecified);
 }

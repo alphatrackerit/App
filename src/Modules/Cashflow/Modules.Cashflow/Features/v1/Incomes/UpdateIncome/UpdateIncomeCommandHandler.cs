@@ -18,14 +18,15 @@ public sealed class UpdateIncomeCommandHandler(CashflowDbContext dbContext)
             .ConfigureAwait(false)
             ?? throw new NotFoundException($"Income {command.IncomeId} not found.");
 
+        // Confirmed/Validated are intentionally NOT passed — a normal edit preserves them
+        // (they change only via the /confirm and /validate endpoints).
         income.Update(
             command.Amount,
             command.Description,
             command.Date,
             command.Percentage,
             command.ProjectId,
-            command.StatusId,
-            command.Confirmed);
+            command.StatusId);
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return income.Id;

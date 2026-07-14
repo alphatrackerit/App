@@ -6,8 +6,7 @@ public sealed record UpdateIncomeCommand(
     Guid IncomeId,
     decimal Amount,
     string? Description = null,
-    DateTimeOffset? Date = null,
+    DateTime? Date = null,
     decimal? Percentage = null,
     Guid? ProjectId = null,
-    Guid? StatusId = null,
-    bool Confirmed = false) : ICommand<Guid>;
+    Guid? StatusId = null) : ICommand<Guid>;

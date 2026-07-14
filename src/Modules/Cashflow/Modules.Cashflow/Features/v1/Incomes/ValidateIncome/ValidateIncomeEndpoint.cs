@@ -20,6 +20,6 @@ public static class ValidateIncomeEndpoint
                 })
             .WithName("ValidateIncome")
             .WithSummary("Mark an income as validated")
-            .RequirePermission(CashflowPermissions.Incomes.Validate);
+            .RequirePermission(CashflowPermissions.Facturacion.ValidateIncome);
     }
 }

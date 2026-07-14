@@ -20,8 +20,6 @@ public static class CashflowPermissions
         public const string Create   = $"Permissions.{Resource}.Create";
         public const string Update   = $"Permissions.{Resource}.Update";
         public const string Delete   = $"Permissions.{Resource}.Delete";
-        public const string Confirm  = $"Permissions.{Resource}.Confirm";
-        public const string Validate = $"Permissions.{Resource}.Validate";
     }
 
     public static class Payments
@@ -31,8 +29,16 @@ public static class CashflowPermissions
         public const string Create   = $"Permissions.{Resource}.Create";
         public const string Update   = $"Permissions.{Resource}.Update";
         public const string Delete   = $"Permissions.{Resource}.Delete";
-        public const string Confirm  = $"Permissions.{Resource}.Confirm";
-        public const string Validate = $"Permissions.{Resource}.Validate";
+    }
+
+    // Billing (facturación) — confirm/validate live under their own resource (spec §8).
+    public static class Facturacion
+    {
+        public const string Resource = "Facturacion";
+        public const string ConfirmIncome  = $"Permissions.{Resource}.ConfirmIncome";
+        public const string ValidateIncome = $"Permissions.{Resource}.ValidateIncome";
+        public const string ConfirmPago    = $"Permissions.{Resource}.ConfirmPago";
+        public const string ValidatePago   = $"Permissions.{Resource}.ValidatePago";
     }
 
     public static class Notes
@@ -121,15 +127,16 @@ public static class CashflowPermissions
         new("Create Incomes",   ActionConstants.Create, Incomes.Resource),
         new("Update Incomes",   ActionConstants.Update, Incomes.Resource),
         new("Delete Incomes",   ActionConstants.Delete, Incomes.Resource),
-        new("Confirm Incomes",  "Confirm",              Incomes.Resource),
-        new("Validate Incomes", "Validate",             Incomes.Resource),
 
         new("View Payments",     ActionConstants.View,   Payments.Resource, IsBasic: true),
         new("Create Payments",   ActionConstants.Create, Payments.Resource),
         new("Update Payments",   ActionConstants.Update, Payments.Resource),
         new("Delete Payments",   ActionConstants.Delete, Payments.Resource),
-        new("Confirm Payments",  "Confirm",              Payments.Resource),
-        new("Validate Payments", "Validate",             Payments.Resource),
+
+        new("Confirm income (billing)",   "ConfirmIncome",  Facturacion.Resource),
+        new("Validate income (billing)",  "ValidateIncome", Facturacion.Resource),
+        new("Confirm payment (billing)",  "ConfirmPago",    Facturacion.Resource),
+        new("Validate payment (billing)", "ValidatePago",   Facturacion.Resource),
 
         new("View Notes",   ActionConstants.View,   Notes.Resource, IsBasic: true),
         new("Create Notes", ActionConstants.Create, Notes.Resource),

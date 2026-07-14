@@ -20,6 +20,6 @@ public static class ConfirmIncomeEndpoint
                 })
             .WithName("ConfirmIncome")
             .WithSummary("Mark an income as confirmed")
-            .RequirePermission(CashflowPermissions.Incomes.Confirm);
+            .RequirePermission(CashflowPermissions.Facturacion.ConfirmIncome);
     }
 }

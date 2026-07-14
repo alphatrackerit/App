@@ -20,6 +20,6 @@ public static class ConfirmPaymentEndpoint
                 })
             .WithName("ConfirmPayment")
             .WithSummary("Mark a payment as confirmed")
-            .RequirePermission(CashflowPermissions.Payments.Confirm);
+            .RequirePermission(CashflowPermissions.Facturacion.ConfirmPago);
     }
 }

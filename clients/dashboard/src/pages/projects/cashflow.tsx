@@ -32,15 +32,17 @@ function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 function ymd(iso: string): { y: number; m: number; d: number } {
+  // Local getters: the backend now serializes dates without a timezone offset
+  // ("2026-07-14T00:00:00"), so reading them back in local time keeps the day stable.
   const dt = new Date(iso);
-  return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
+  return { y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate() };
 }
 
 type DayCell = { inc: number; pay: number; incList: CashflowEntry[]; payList: CashflowEntry[] };
 
 export function FlujoDeCajaPage() {
   const now = new Date();
-  const [year, setYear] = useState<number>(now.getUTCFullYear());
+  const [year, setYear] = useState<number>(now.getFullYear());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [projectsOpen, setProjectsOpen] = useState(false);
@@ -137,7 +139,7 @@ export function FlujoDeCajaPage() {
 
   const totalProjects = data?.projects.length ?? 0;
   const selectedCount = totalProjects - excluded.size;
-  const today = { y: now.getUTCFullYear(), m: now.getUTCMonth() + 1, d: now.getUTCDate() };
+  const today = { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() };
 
   const headTh =
     "sticky bg-[var(--color-card)] z-20 border border-[var(--color-border)] px-2 py-1.5 text-center text-[11px] font-semibold text-[var(--color-muted-foreground)]";
