@@ -41,6 +41,12 @@ public static class CashflowPermissions
         public const string ValidatePago   = $"Permissions.{Resource}.ValidatePago";
     }
 
+    public static class Reportes
+    {
+        public const string Resource = "Reportes";
+        public const string View = $"Permissions.{Resource}.View";
+    }
+
     public static class Notes
     {
         public const string Resource = "Projects.Notes";
@@ -137,6 +143,8 @@ public static class CashflowPermissions
         new("Validate income (billing)",  "ValidateIncome", Facturacion.Resource),
         new("Confirm payment (billing)",  "ConfirmPago",    Facturacion.Resource),
         new("Validate payment (billing)", "ValidatePago",   Facturacion.Resource),
+
+        new("View reports", ActionConstants.View, Reportes.Resource, IsBasic: true),
 
         new("View Notes",   ActionConstants.View,   Notes.Resource, IsBasic: true),
         new("Create Notes", ActionConstants.Create, Notes.Resource),

@@ -35,6 +35,7 @@ using FSH.Modules.Cashflow.Features.v1.Statuses;
 using FSH.Modules.Cashflow.Features.v1.Companies;
 using FSH.Modules.Cashflow.Features.v1.Societies;
 using FSH.Modules.Cashflow.Features.v1.Prefixes;
+using FSH.Modules.Cashflow.Features.v1.Reports.GetDailySummary;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -163,5 +164,8 @@ public sealed class CashflowModule : IModule
         group.MapCreatePrefixEndpoint();
         group.MapUpdatePrefixEndpoint();
         group.MapDeletePrefixEndpoint();
+
+        // Reports (server-side aggregation)
+        group.MapGetDailySummaryEndpoint();
     }
 }
