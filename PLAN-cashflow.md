@@ -179,6 +179,12 @@ Mover no admite medias tintas: un `DbContext` se migra entero.
   recurso `Facturacion` en confirm/validate; invalidación de caché; validadores de obligatorios del proyecto.
 
 ### Fase 4 — Reporte server-side
+> **✅ COMPLETADA (2026-07-14, commit `e7062d25`).** Verificado end-to-end: `GET /api/v1/cashflow/reports/daily-summary`
+> (permiso `Reportes.View`) implementa el algoritmo §6 — totales por día, **saldo acumulado corrido** por proyecto,
+> **color del proveedor predominante** (mayor PrioridadVisual; fallback `#ffffff00`/`int.MaxValue`), nombres
+> desnormalizados, y filtros (from/to, companyIds, projectIds, statusIds, onlyConfirmed/onlyValidated). Revisado
+> adversarialmente (§6 correcto; aplicado pre-agrupado O(M)). Sin cambio de schema. DTOs en inglés (camelCase en el cable).
+
 - DTOs + `GetDailySummaryQuery` + validator + handler (algoritmo §6) + endpoint `reports/daily-summary`
   (permiso `Reports.View`). Ajustar/renombrar el ledger crudo para Gráficos.
 
