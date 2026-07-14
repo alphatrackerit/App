@@ -92,6 +92,24 @@ public static class CashflowPermissions
         public const string Delete = $"Permissions.{Resource}.Delete";
     }
 
+    public static class Societies
+    {
+        public const string Resource = "Administration.Societies";
+        public const string View   = $"Permissions.{Resource}.View";
+        public const string Create = $"Permissions.{Resource}.Create";
+        public const string Update = $"Permissions.{Resource}.Update";
+        public const string Delete = $"Permissions.{Resource}.Delete";
+    }
+
+    public static class Prefixes
+    {
+        public const string Resource = "Administration.Prefixes";
+        public const string View   = $"Permissions.{Resource}.View";
+        public const string Create = $"Permissions.{Resource}.Create";
+        public const string Update = $"Permissions.{Resource}.Update";
+        public const string Delete = $"Permissions.{Resource}.Delete";
+    }
+
     public static IReadOnlyList<FshPermission> All { get; } =
     [
         new("View Projects",   ActionConstants.View,   Projects.Resource, IsBasic: true),
@@ -142,5 +160,15 @@ public static class CashflowPermissions
         new("Create Companies", ActionConstants.Create, Companies.Resource),
         new("Update Companies", ActionConstants.Update, Companies.Resource),
         new("Delete Companies", ActionConstants.Delete, Companies.Resource),
+
+        new("View Societies",   ActionConstants.View,   Societies.Resource, IsBasic: true),
+        new("Create Societies", ActionConstants.Create, Societies.Resource),
+        new("Update Societies", ActionConstants.Update, Societies.Resource),
+        new("Delete Societies", ActionConstants.Delete, Societies.Resource),
+
+        new("View Prefixes",   ActionConstants.View,   Prefixes.Resource, IsBasic: true),
+        new("Create Prefixes", ActionConstants.Create, Prefixes.Resource),
+        new("Update Prefixes", ActionConstants.Update, Prefixes.Resource),
+        new("Delete Prefixes", ActionConstants.Delete, Prefixes.Resource),
     ];
 }

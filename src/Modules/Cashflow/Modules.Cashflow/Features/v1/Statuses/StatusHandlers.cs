@@ -1,7 +1,6 @@
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Shared.Persistence;
 using FluentValidation;
-using FSH.Modules.Cashflow.Contracts.Dtos;
 using FSH.Modules.Cashflow.Contracts.v1.Statuses;
 using FSH.Modules.Cashflow.Data;
 using FSH.Modules.Cashflow.Domain;
@@ -15,7 +14,7 @@ public sealed class CreateStatusCommandHandler(CashflowDbContext db) : ICommandH
     public async ValueTask<Guid> Handle(CreateStatusCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var entity = Status.Create(command.Name, command.Code);
+        var entity = Status.Create(command.Name, command.Code, command.Type, command.ColorHex);
         db.Statuses.Add(entity);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
@@ -28,6 +27,8 @@ public sealed class CreateStatusCommandValidator : AbstractValidator<CreateStatu
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Code).MaximumLength(64);
+        RuleFor(x => x.ColorHex).MaximumLength(32);
+        RuleFor(x => x.Type).IsInEnum().When(x => x.Type is not null);
     }
 }
 
@@ -38,7 +39,7 @@ public sealed class UpdateStatusCommandHandler(CashflowDbContext db) : ICommandH
         ArgumentNullException.ThrowIfNull(command);
         var entity = await db.Statuses.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Status {command.Id} not found.");
-        entity.Update(command.Name, command.Code);
+        entity.Update(command.Name, command.Code, command.Type, command.ColorHex);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
     }
@@ -51,6 +52,8 @@ public sealed class UpdateStatusCommandValidator : AbstractValidator<UpdateStatu
         RuleFor(x => x.Id).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Code).MaximumLength(64);
+        RuleFor(x => x.ColorHex).MaximumLength(32);
+        RuleFor(x => x.Type).IsInEnum().When(x => x.Type is not null);
     }
 }
 
@@ -72,15 +75,19 @@ public sealed class DeleteStatusCommandValidator : AbstractValidator<DeleteStatu
     public DeleteStatusCommandValidator() => RuleFor(x => x.Id).NotEmpty();
 }
 
-public sealed class SearchStatusesQueryHandler(CashflowDbContext db) : IQueryHandler<SearchStatusesQuery, PagedResponse<LookupDto>>
+public sealed class SearchStatusesQueryHandler(CashflowDbContext db) : IQueryHandler<SearchStatusesQuery, PagedResponse<StatusDto>>
 {
-    public async ValueTask<PagedResponse<LookupDto>> Handle(SearchStatusesQuery query, CancellationToken cancellationToken)
+    public async ValueTask<PagedResponse<StatusDto>> Handle(SearchStatusesQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
         int page = query.PageNumber < 1 ? 1 : query.PageNumber;
         int size = query.PageSize is < 1 or > 200 ? 20 : query.PageSize;
 
         var q = db.Statuses.AsNoTracking().AsQueryable();
+        if (query.Type is not null)
+        {
+            q = q.Where(x => x.Type == query.Type);
+        }
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             string t = query.Search.Trim();
@@ -98,9 +105,9 @@ public sealed class SearchStatusesQueryHandler(CashflowDbContext db) : IQueryHan
 
         long total = await q.LongCountAsync(cancellationToken).ConfigureAwait(false);
         var items = await q.Skip((page - 1) * size).Take(size).ToListAsync(cancellationToken).ConfigureAwait(false);
-        return new PagedResponse<LookupDto>
+        return new PagedResponse<StatusDto>
         {
-            Items = items.Select(x => new LookupDto(x.Id, x.Name, x.Code)).ToList(),
+            Items = items.Select(x => new StatusDto(x.Id, x.Name, x.Code, x.Type, x.ColorHex)).ToList(),
             PageNumber = page,
             PageSize = size,
             TotalCount = total,

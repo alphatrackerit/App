@@ -1,7 +1,6 @@
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Shared.Persistence;
 using FluentValidation;
-using FSH.Modules.Cashflow.Contracts.Dtos;
 using FSH.Modules.Cashflow.Contracts.v1.Clients;
 using FSH.Modules.Cashflow.Data;
 using FSH.Modules.Cashflow.Domain;
@@ -15,7 +14,9 @@ public sealed class CreateClientCommandHandler(CashflowDbContext db) : ICommandH
     public async ValueTask<Guid> Handle(CreateClientCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var entity = Client.Create(command.Name, command.Code);
+        var entity = Client.Create(
+            command.Name, command.Code, command.TaxId, command.Address, command.ClientType,
+            command.Contact, command.LegalName, command.Phone, command.Email, command.RegisteredOn, command.ColorHex);
         db.Clients.Add(entity);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
@@ -28,6 +29,14 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Code).MaximumLength(64);
+        RuleFor(x => x.TaxId).MaximumLength(64);
+        RuleFor(x => x.Address).MaximumLength(512);
+        RuleFor(x => x.ClientType).MaximumLength(128);
+        RuleFor(x => x.Contact).MaximumLength(256);
+        RuleFor(x => x.LegalName).MaximumLength(256);
+        RuleFor(x => x.Phone).MaximumLength(64);
+        RuleFor(x => x.Email).MaximumLength(256);
+        RuleFor(x => x.ColorHex).MaximumLength(32);
     }
 }
 
@@ -38,7 +47,9 @@ public sealed class UpdateClientCommandHandler(CashflowDbContext db) : ICommandH
         ArgumentNullException.ThrowIfNull(command);
         var entity = await db.Clients.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Client {command.Id} not found.");
-        entity.Update(command.Name, command.Code);
+        entity.Update(
+            command.Name, command.Code, command.TaxId, command.Address, command.ClientType,
+            command.Contact, command.LegalName, command.Phone, command.Email, command.RegisteredOn, command.ColorHex);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
     }
@@ -51,6 +62,14 @@ public sealed class UpdateClientCommandValidator : AbstractValidator<UpdateClien
         RuleFor(x => x.Id).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Code).MaximumLength(64);
+        RuleFor(x => x.TaxId).MaximumLength(64);
+        RuleFor(x => x.Address).MaximumLength(512);
+        RuleFor(x => x.ClientType).MaximumLength(128);
+        RuleFor(x => x.Contact).MaximumLength(256);
+        RuleFor(x => x.LegalName).MaximumLength(256);
+        RuleFor(x => x.Phone).MaximumLength(64);
+        RuleFor(x => x.Email).MaximumLength(256);
+        RuleFor(x => x.ColorHex).MaximumLength(32);
     }
 }
 
@@ -72,9 +91,9 @@ public sealed class DeleteClientCommandValidator : AbstractValidator<DeleteClien
     public DeleteClientCommandValidator() => RuleFor(x => x.Id).NotEmpty();
 }
 
-public sealed class SearchClientsQueryHandler(CashflowDbContext db) : IQueryHandler<SearchClientsQuery, PagedResponse<LookupDto>>
+public sealed class SearchClientsQueryHandler(CashflowDbContext db) : IQueryHandler<SearchClientsQuery, PagedResponse<ClientDto>>
 {
-    public async ValueTask<PagedResponse<LookupDto>> Handle(SearchClientsQuery query, CancellationToken cancellationToken)
+    public async ValueTask<PagedResponse<ClientDto>> Handle(SearchClientsQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
         int page = query.PageNumber < 1 ? 1 : query.PageNumber;
@@ -98,9 +117,11 @@ public sealed class SearchClientsQueryHandler(CashflowDbContext db) : IQueryHand
 
         long total = await q.LongCountAsync(cancellationToken).ConfigureAwait(false);
         var items = await q.Skip((page - 1) * size).Take(size).ToListAsync(cancellationToken).ConfigureAwait(false);
-        return new PagedResponse<LookupDto>
+        return new PagedResponse<ClientDto>
         {
-            Items = items.Select(x => new LookupDto(x.Id, x.Name, x.Code)).ToList(),
+            Items = items.Select(x => new ClientDto(
+                x.Id, x.Name, x.Code, x.TaxId, x.Address, x.ClientType,
+                x.Contact, x.LegalName, x.Phone, x.Email, x.RegisteredOn, x.ColorHex)).ToList(),
             PageNumber = page,
             PageSize = size,
             TotalCount = total,

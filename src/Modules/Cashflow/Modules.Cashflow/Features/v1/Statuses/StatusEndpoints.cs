@@ -1,6 +1,7 @@
 using FSH.Framework.Shared.Identity.Authorization;
 using FSH.Framework.Web.Idempotency;
 using FSH.Modules.Cashflow.Contracts.Authorization;
+using FSH.Modules.Cashflow.Contracts.Enums;
 using FSH.Modules.Cashflow.Contracts.v1.Statuses;
 using Mediator;
 using Microsoft.AspNetCore.Builder;
@@ -13,10 +14,10 @@ public static class SearchStatusesEndpoint
 {
     internal static RouteHandlerBuilder MapSearchStatusesEndpoint(this IEndpointRouteBuilder endpoints) =>
         endpoints.MapGet("/statuses",
-            (string? search, int? pageNumber, int? pageSize, string? sortBy, string? sortDir, IMediator mediator, CancellationToken ct) =>
-                mediator.Send(new SearchStatusesQuery(search, pageNumber ?? 1, pageSize ?? 20, sortBy, sortDir), ct))
+            (string? search, StatusType? type, int? pageNumber, int? pageSize, string? sortBy, string? sortDir, IMediator mediator, CancellationToken ct) =>
+                mediator.Send(new SearchStatusesQuery(search, pageNumber ?? 1, pageSize ?? 20, sortBy, sortDir, type), ct))
             .WithName("SearchStatuses")
-            .WithSummary("Search statuses (paged)")
+            .WithSummary("Search statuses (paged; filter by type)")
             .RequirePermission(CashflowPermissions.Statuses.View);
 }
 

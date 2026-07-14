@@ -7,18 +7,30 @@ public sealed class Company : AggregateRoot<Guid>
     public string Name { get; private set; } = default!;
     public string? Code { get; private set; }
 
+    public string? LegalName { get; private set; }          // RazonSocial
+    public string? TaxRegistration { get; private set; }    // RegistroFiscal
+
     private Company() { }
 
-    public static Company Create(string name, string? code)
+    public static Company Create(string name, string? code, string? legalName, string? taxRegistration)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        return new Company { Id = Guid.CreateVersion7(), Name = name.Trim(), Code = code?.Trim() };
+        return new Company
+        {
+            Id = Guid.CreateVersion7(),
+            Name = name.Trim(),
+            Code = code?.Trim(),
+            LegalName = legalName?.Trim(),
+            TaxRegistration = taxRegistration?.Trim(),
+        };
     }
 
-    public void Update(string name, string? code)
+    public void Update(string name, string? code, string? legalName, string? taxRegistration)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name.Trim();
         Code = code?.Trim();
+        LegalName = legalName?.Trim();
+        TaxRegistration = taxRegistration?.Trim();
     }
 }

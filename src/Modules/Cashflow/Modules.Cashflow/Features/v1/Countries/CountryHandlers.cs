@@ -1,7 +1,6 @@
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Shared.Persistence;
 using FluentValidation;
-using FSH.Modules.Cashflow.Contracts.Dtos;
 using FSH.Modules.Cashflow.Contracts.v1.Countries;
 using FSH.Modules.Cashflow.Data;
 using FSH.Modules.Cashflow.Domain;
@@ -15,7 +14,7 @@ public sealed class CreateCountryCommandHandler(CashflowDbContext db) : ICommand
     public async ValueTask<Guid> Handle(CreateCountryCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var entity = Country.Create(command.Name, command.Code);
+        var entity = Country.Create(command.Name, command.Code, command.Description);
         db.Countries.Add(entity);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
@@ -28,6 +27,7 @@ public sealed class CreateCountryCommandValidator : AbstractValidator<CreateCoun
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Code).MaximumLength(64);
+        RuleFor(x => x.Description).MaximumLength(1024);
     }
 }
 
@@ -38,7 +38,7 @@ public sealed class UpdateCountryCommandHandler(CashflowDbContext db) : ICommand
         ArgumentNullException.ThrowIfNull(command);
         var entity = await db.Countries.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Country {command.Id} not found.");
-        entity.Update(command.Name, command.Code);
+        entity.Update(command.Name, command.Code, command.Description);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
     }
@@ -51,6 +51,7 @@ public sealed class UpdateCountryCommandValidator : AbstractValidator<UpdateCoun
         RuleFor(x => x.Id).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Code).MaximumLength(64);
+        RuleFor(x => x.Description).MaximumLength(1024);
     }
 }
 
@@ -72,9 +73,9 @@ public sealed class DeleteCountryCommandValidator : AbstractValidator<DeleteCoun
     public DeleteCountryCommandValidator() => RuleFor(x => x.Id).NotEmpty();
 }
 
-public sealed class SearchCountriesQueryHandler(CashflowDbContext db) : IQueryHandler<SearchCountriesQuery, PagedResponse<LookupDto>>
+public sealed class SearchCountriesQueryHandler(CashflowDbContext db) : IQueryHandler<SearchCountriesQuery, PagedResponse<CountryDto>>
 {
-    public async ValueTask<PagedResponse<LookupDto>> Handle(SearchCountriesQuery query, CancellationToken cancellationToken)
+    public async ValueTask<PagedResponse<CountryDto>> Handle(SearchCountriesQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
         int page = query.PageNumber < 1 ? 1 : query.PageNumber;
@@ -98,9 +99,9 @@ public sealed class SearchCountriesQueryHandler(CashflowDbContext db) : IQueryHa
 
         long total = await q.LongCountAsync(cancellationToken).ConfigureAwait(false);
         var items = await q.Skip((page - 1) * size).Take(size).ToListAsync(cancellationToken).ConfigureAwait(false);
-        return new PagedResponse<LookupDto>
+        return new PagedResponse<CountryDto>
         {
-            Items = items.Select(x => new LookupDto(x.Id, x.Name, x.Code)).ToList(),
+            Items = items.Select(x => new CountryDto(x.Id, x.Name, x.Code, x.Description)).ToList(),
             PageNumber = page,
             PageSize = size,
             TotalCount = total,

@@ -33,6 +33,8 @@ using FSH.Modules.Cashflow.Features.v1.Suppliers;
 using FSH.Modules.Cashflow.Features.v1.Countries;
 using FSH.Modules.Cashflow.Features.v1.Statuses;
 using FSH.Modules.Cashflow.Features.v1.Companies;
+using FSH.Modules.Cashflow.Features.v1.Societies;
+using FSH.Modules.Cashflow.Features.v1.Prefixes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -149,5 +151,17 @@ public sealed class CashflowModule : IModule
         group.MapCreateCompanyEndpoint();
         group.MapUpdateCompanyEndpoint();
         group.MapDeleteCompanyEndpoint();
+
+        // Societies
+        group.MapSearchSocietiesEndpoint();
+        group.MapCreateSocietyEndpoint();
+        group.MapUpdateSocietyEndpoint();
+        group.MapDeleteSocietyEndpoint();
+
+        // Prefixes
+        group.MapSearchPrefixesEndpoint();
+        group.MapCreatePrefixEndpoint();
+        group.MapUpdatePrefixEndpoint();
+        group.MapDeletePrefixEndpoint();
     }
 }

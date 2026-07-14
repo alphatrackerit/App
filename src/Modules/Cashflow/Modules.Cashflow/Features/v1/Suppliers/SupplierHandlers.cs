@@ -1,7 +1,6 @@
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Shared.Persistence;
 using FluentValidation;
-using FSH.Modules.Cashflow.Contracts.Dtos;
 using FSH.Modules.Cashflow.Contracts.v1.Suppliers;
 using FSH.Modules.Cashflow.Data;
 using FSH.Modules.Cashflow.Domain;
@@ -15,7 +14,10 @@ public sealed class CreateSupplierCommandHandler(CashflowDbContext db) : IComman
     public async ValueTask<Guid> Handle(CreateSupplierCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var entity = Supplier.Create(command.Name, command.Code);
+        var entity = Supplier.Create(
+            command.Name, command.Code, command.TaxId, command.Address, command.SupplierType,
+            command.Contact, command.LegalName, command.Phone, command.Email, command.RegisteredOn,
+            command.ColorHex, command.VisualPriority);
         db.Suppliers.Add(entity);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
@@ -28,6 +30,15 @@ public sealed class CreateSupplierCommandValidator : AbstractValidator<CreateSup
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Code).MaximumLength(64);
+        RuleFor(x => x.TaxId).MaximumLength(64);
+        RuleFor(x => x.Address).MaximumLength(512);
+        RuleFor(x => x.SupplierType).MaximumLength(128);
+        RuleFor(x => x.Contact).MaximumLength(256);
+        RuleFor(x => x.LegalName).MaximumLength(256);
+        RuleFor(x => x.Phone).MaximumLength(64);
+        RuleFor(x => x.Email).MaximumLength(256);
+        RuleFor(x => x.ColorHex).MaximumLength(32);
+        RuleFor(x => x.VisualPriority).GreaterThanOrEqualTo(0);
     }
 }
 
@@ -38,7 +49,10 @@ public sealed class UpdateSupplierCommandHandler(CashflowDbContext db) : IComman
         ArgumentNullException.ThrowIfNull(command);
         var entity = await db.Suppliers.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Supplier {command.Id} not found.");
-        entity.Update(command.Name, command.Code);
+        entity.Update(
+            command.Name, command.Code, command.TaxId, command.Address, command.SupplierType,
+            command.Contact, command.LegalName, command.Phone, command.Email, command.RegisteredOn,
+            command.ColorHex, command.VisualPriority);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
     }
@@ -51,6 +65,15 @@ public sealed class UpdateSupplierCommandValidator : AbstractValidator<UpdateSup
         RuleFor(x => x.Id).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Code).MaximumLength(64);
+        RuleFor(x => x.TaxId).MaximumLength(64);
+        RuleFor(x => x.Address).MaximumLength(512);
+        RuleFor(x => x.SupplierType).MaximumLength(128);
+        RuleFor(x => x.Contact).MaximumLength(256);
+        RuleFor(x => x.LegalName).MaximumLength(256);
+        RuleFor(x => x.Phone).MaximumLength(64);
+        RuleFor(x => x.Email).MaximumLength(256);
+        RuleFor(x => x.ColorHex).MaximumLength(32);
+        RuleFor(x => x.VisualPriority).GreaterThanOrEqualTo(0);
     }
 }
 
@@ -72,9 +95,9 @@ public sealed class DeleteSupplierCommandValidator : AbstractValidator<DeleteSup
     public DeleteSupplierCommandValidator() => RuleFor(x => x.Id).NotEmpty();
 }
 
-public sealed class SearchSuppliersQueryHandler(CashflowDbContext db) : IQueryHandler<SearchSuppliersQuery, PagedResponse<LookupDto>>
+public sealed class SearchSuppliersQueryHandler(CashflowDbContext db) : IQueryHandler<SearchSuppliersQuery, PagedResponse<SupplierDto>>
 {
-    public async ValueTask<PagedResponse<LookupDto>> Handle(SearchSuppliersQuery query, CancellationToken cancellationToken)
+    public async ValueTask<PagedResponse<SupplierDto>> Handle(SearchSuppliersQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
         int page = query.PageNumber < 1 ? 1 : query.PageNumber;
@@ -98,9 +121,11 @@ public sealed class SearchSuppliersQueryHandler(CashflowDbContext db) : IQueryHa
 
         long total = await q.LongCountAsync(cancellationToken).ConfigureAwait(false);
         var items = await q.Skip((page - 1) * size).Take(size).ToListAsync(cancellationToken).ConfigureAwait(false);
-        return new PagedResponse<LookupDto>
+        return new PagedResponse<SupplierDto>
         {
-            Items = items.Select(x => new LookupDto(x.Id, x.Name, x.Code)).ToList(),
+            Items = items.Select(x => new SupplierDto(
+                x.Id, x.Name, x.Code, x.TaxId, x.Address, x.SupplierType, x.Contact,
+                x.LegalName, x.Phone, x.Email, x.RegisteredOn, x.ColorHex, x.VisualPriority)).ToList(),
             PageNumber = page,
             PageSize = size,
             TotalCount = total,

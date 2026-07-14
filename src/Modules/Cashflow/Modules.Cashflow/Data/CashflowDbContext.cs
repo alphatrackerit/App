@@ -27,10 +27,12 @@ public sealed class CashflowDbContext : BaseDbContext
 
     // Catalog master-data (consolidated from the former Administration module)
     public DbSet<Client> Clients => Set<Client>();
+    public DbSet<Society> Societies => Set<Society>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Country> Countries => Set<Country>();
     public DbSet<Status> Statuses => Set<Status>();
     public DbSet<Company> Companies => Set<Company>();
+    public DbSet<Prefix> Prefixes => Set<Prefix>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

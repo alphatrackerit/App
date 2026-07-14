@@ -1,7 +1,6 @@
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Shared.Persistence;
 using FluentValidation;
-using FSH.Modules.Cashflow.Contracts.Dtos;
 using FSH.Modules.Cashflow.Contracts.v1.Companies;
 using FSH.Modules.Cashflow.Data;
 using FSH.Modules.Cashflow.Domain;
@@ -15,7 +14,7 @@ public sealed class CreateCompanyCommandHandler(CashflowDbContext db) : ICommand
     public async ValueTask<Guid> Handle(CreateCompanyCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var entity = Company.Create(command.Name, command.Code);
+        var entity = Company.Create(command.Name, command.Code, command.LegalName, command.TaxRegistration);
         db.Companies.Add(entity);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
@@ -28,6 +27,8 @@ public sealed class CreateCompanyCommandValidator : AbstractValidator<CreateComp
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Code).MaximumLength(64);
+        RuleFor(x => x.LegalName).MaximumLength(256);
+        RuleFor(x => x.TaxRegistration).MaximumLength(128);
     }
 }
 
@@ -38,7 +39,7 @@ public sealed class UpdateCompanyCommandHandler(CashflowDbContext db) : ICommand
         ArgumentNullException.ThrowIfNull(command);
         var entity = await db.Companies.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Company {command.Id} not found.");
-        entity.Update(command.Name, command.Code);
+        entity.Update(command.Name, command.Code, command.LegalName, command.TaxRegistration);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
     }
@@ -51,6 +52,8 @@ public sealed class UpdateCompanyCommandValidator : AbstractValidator<UpdateComp
         RuleFor(x => x.Id).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Code).MaximumLength(64);
+        RuleFor(x => x.LegalName).MaximumLength(256);
+        RuleFor(x => x.TaxRegistration).MaximumLength(128);
     }
 }
 
@@ -72,9 +75,9 @@ public sealed class DeleteCompanyCommandValidator : AbstractValidator<DeleteComp
     public DeleteCompanyCommandValidator() => RuleFor(x => x.Id).NotEmpty();
 }
 
-public sealed class SearchCompaniesQueryHandler(CashflowDbContext db) : IQueryHandler<SearchCompaniesQuery, PagedResponse<LookupDto>>
+public sealed class SearchCompaniesQueryHandler(CashflowDbContext db) : IQueryHandler<SearchCompaniesQuery, PagedResponse<CompanyDto>>
 {
-    public async ValueTask<PagedResponse<LookupDto>> Handle(SearchCompaniesQuery query, CancellationToken cancellationToken)
+    public async ValueTask<PagedResponse<CompanyDto>> Handle(SearchCompaniesQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
         int page = query.PageNumber < 1 ? 1 : query.PageNumber;
@@ -98,9 +101,9 @@ public sealed class SearchCompaniesQueryHandler(CashflowDbContext db) : IQueryHa
 
         long total = await q.LongCountAsync(cancellationToken).ConfigureAwait(false);
         var items = await q.Skip((page - 1) * size).Take(size).ToListAsync(cancellationToken).ConfigureAwait(false);
-        return new PagedResponse<LookupDto>
+        return new PagedResponse<CompanyDto>
         {
-            Items = items.Select(x => new LookupDto(x.Id, x.Name, x.Code)).ToList(),
+            Items = items.Select(x => new CompanyDto(x.Id, x.Name, x.Code, x.LegalName, x.TaxRegistration)).ToList(),
             PageNumber = page,
             PageSize = size,
             TotalCount = total,

@@ -13,6 +13,16 @@ public sealed class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Name).HasColumnName("Nombre").IsRequired().HasMaxLength(256);
         builder.Property(x => x.Code).HasColumnName("Codigo").HasMaxLength(64);
+        builder.Property(x => x.TaxId).HasColumnName("NifCif").HasMaxLength(64);
+        builder.Property(x => x.Address).HasColumnName("Direccion").HasMaxLength(512);
+        builder.Property(x => x.SupplierType).HasColumnName("TipoProveedor").HasMaxLength(128);
+        builder.Property(x => x.Contact).HasColumnName("Contacto").HasMaxLength(256);
+        builder.Property(x => x.LegalName).HasColumnName("RazonSocial").HasMaxLength(256);
+        builder.Property(x => x.Phone).HasColumnName("Telefono").HasMaxLength(64);
+        builder.Property(x => x.Email).HasColumnName("Email").HasMaxLength(256);
+        builder.Property(x => x.RegisteredOn).HasColumnName("FechaAlta");
+        builder.Property(x => x.ColorHex).HasColumnName("ColorHex").HasMaxLength(32);
+        builder.Property(x => x.VisualPriority).HasColumnName("PrioridadVisual").IsRequired();
         builder.HasIndex(x => x.Name);
         builder.Ignore(x => x.DomainEvents);
     }
