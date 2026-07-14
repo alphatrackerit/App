@@ -16,8 +16,7 @@
 	  <ProjectReference Include="..\..\Modules\Webhooks\Modules.Webhooks\Modules.Webhooks.csproj" />
 	  <ProjectReference Include="..\..\Modules\Billing\Modules.Billing\Modules.Billing.csproj" />
 	  <ProjectReference Include="..\..\Modules\Catalog\Modules.Catalog\Modules.Catalog.csproj" />
-	  <ProjectReference Include="..\..\Modules\Projects\Modules.Projects\Modules.Projects.csproj" />
-	  <ProjectReference Include="..\..\Modules\Administration\Modules.Administration\Modules.Administration.csproj" />
+	  <ProjectReference Include="..\..\Modules\Cashflow\Modules.Cashflow\Modules.Cashflow.csproj" />
 	  <ProjectReference Include="..\..\Modules\Avicola\Modules.Avicola\Modules.Avicola.csproj" />
 	  <ProjectReference Include="..\..\Modules\Tickets\Modules.Tickets\Modules.Tickets.csproj" />
 	  <ProjectReference Include="..\..\Modules\Chat\Modules.Chat\Modules.Chat.csproj" />
@@ -30,8 +29,7 @@
 	  <Folder Include="MultiTenancy\" />
 	  <Folder Include="Billing\" />
 	  <Folder Include="Catalog\" />
-	  <Folder Include="Projects\" />
-	  <Folder Include="Administration\" />
+	  <Folder Include="Cashflow\" />
 	  <Folder Include="Avicola\" />
 	  <Folder Include="Tickets\" />
 	  <Folder Include="Chat\" />

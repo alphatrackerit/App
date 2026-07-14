@@ -12,10 +12,6 @@
     <Project Path="BuildingBlocks/Web/Web.csproj" />
   </Folder>
   <Folder Name="/Modules/" />
-  <Folder Name="/Modules/Administration/">
-    <Project Path="Modules/Administration/Modules.Administration.Contracts/Modules.Administration.Contracts.csproj" />
-    <Project Path="Modules/Administration/Modules.Administration/Modules.Administration.csproj" />
-  </Folder>
   <Folder Name="/Modules/Auditing/">
     <Project Path="Modules/Auditing/Modules.Auditing.Contracts/Modules.Auditing.Contracts.csproj" />
     <Project Path="Modules/Auditing/Modules.Auditing/Modules.Auditing.csproj" Id="2764205b-8725-43a7-b499-67b98959ad50" />
@@ -52,9 +48,9 @@
     <Project Path="Modules/Notifications/Modules.Notifications.Contracts/Modules.Notifications.Contracts.csproj" />
     <Project Path="Modules/Notifications/Modules.Notifications/Modules.Notifications.csproj" />
   </Folder>
-  <Folder Name="/Modules/Projects/">
-    <Project Path="Modules/Projects/Modules.Projects.Contracts/Modules.Projects.Contracts.csproj" />
-    <Project Path="Modules/Projects/Modules.Projects/Modules.Projects.csproj" />
+  <Folder Name="/Modules/Cashflow/">
+    <Project Path="Modules/Cashflow/Modules.Cashflow.Contracts/Modules.Cashflow.Contracts.csproj" />
+    <Project Path="Modules/Cashflow/Modules.Cashflow/Modules.Cashflow.csproj" />
   </Folder>
   <Folder Name="/Modules/Tickets/">
     <Project Path="Modules/Tickets/Modules.Tickets.Contracts/Modules.Tickets.Contracts.csproj" />

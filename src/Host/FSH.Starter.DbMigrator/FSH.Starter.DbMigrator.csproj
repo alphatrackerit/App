@@ -44,10 +44,8 @@
     <ProjectReference Include="..\..\Modules\Files\Modules.Files.Contracts\Modules.Files.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Identity\Modules.Identity\Modules.Identity.csproj" />
     <ProjectReference Include="..\..\Modules\Multitenancy\Modules.Multitenancy\Modules.Multitenancy.csproj" />
-    <ProjectReference Include="..\..\Modules\Projects\Modules.Projects\Modules.Projects.csproj" />
-    <ProjectReference Include="..\..\Modules\Projects\Modules.Projects.Contracts\Modules.Projects.Contracts.csproj" />
-    <ProjectReference Include="..\..\Modules\Administration\Modules.Administration\Modules.Administration.csproj" />
-    <ProjectReference Include="..\..\Modules\Administration\Modules.Administration.Contracts\Modules.Administration.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Cashflow\Modules.Cashflow\Modules.Cashflow.csproj" />
+    <ProjectReference Include="..\..\Modules\Cashflow\Modules.Cashflow.Contracts\Modules.Cashflow.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Avicola\Modules.Avicola\Modules.Avicola.csproj" />
     <ProjectReference Include="..\..\Modules\Avicola\Modules.Avicola.Contracts\Modules.Avicola.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Tickets\Modules.Tickets\Modules.Tickets.csproj" />
@@ -59,12 +57,8 @@
   <!-- Share configuration with the API so connection strings + tenant options
        stay in lock-step. Production deployments override via env vars. -->
   <ItemGroup>
-    <None Include="..\FSH.Starter.Api\appsettings.json"
-          Link="appsettings.json"
-          CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\FSH.Starter.Api\appsettings.Development.json"
-          Link="appsettings.Development.json"
-          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\FSH.Starter.Api\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\FSH.Starter.Api\appsettings.Development.json" Link="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

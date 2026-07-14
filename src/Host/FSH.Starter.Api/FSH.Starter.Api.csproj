@@ -38,10 +38,8 @@
     <ProjectReference Include="..\..\Modules\Billing\Modules.Billing.Contracts\Modules.Billing.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Catalog\Modules.Catalog\Modules.Catalog.csproj" />
     <ProjectReference Include="..\..\Modules\Catalog\Modules.Catalog.Contracts\Modules.Catalog.Contracts.csproj" />
-    <ProjectReference Include="..\..\Modules\Projects\Modules.Projects\Modules.Projects.csproj" />
-    <ProjectReference Include="..\..\Modules\Projects\Modules.Projects.Contracts\Modules.Projects.Contracts.csproj" />
-    <ProjectReference Include="..\..\Modules\Administration\Modules.Administration\Modules.Administration.csproj" />
-    <ProjectReference Include="..\..\Modules\Administration\Modules.Administration.Contracts\Modules.Administration.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Cashflow\Modules.Cashflow\Modules.Cashflow.csproj" />
+    <ProjectReference Include="..\..\Modules\Cashflow\Modules.Cashflow.Contracts\Modules.Cashflow.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Avicola\Modules.Avicola\Modules.Avicola.csproj" />
     <ProjectReference Include="..\..\Modules\Avicola\Modules.Avicola.Contracts\Modules.Avicola.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Tickets\Modules.Tickets\Modules.Tickets.csproj" />

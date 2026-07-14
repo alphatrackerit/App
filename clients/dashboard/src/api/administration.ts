@@ -31,12 +31,12 @@ export type CatalogApi = {
 
 function catalogApi(base: string): CatalogApi {
   return {
-    search: (params = {}) => apiFetch<PagedResponse<Lookup>>(`/api/v1${base}${query(params)}`),
-    create: (input) => apiFetch<string>(`/api/v1${base}`, { method: "POST", body: JSON.stringify(input) }),
+    search: (params = {}) => apiFetch<PagedResponse<Lookup>>(`/api/v1/cashflow${base}${query(params)}`),
+    create: (input) => apiFetch<string>(`/api/v1/cashflow${base}`, { method: "POST", body: JSON.stringify(input) }),
     update: (id, input) =>
-      apiFetch<string>(`/api/v1${base}/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(input) }),
+      apiFetch<string>(`/api/v1/cashflow${base}/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(input) }),
     remove: async (id) => {
-      await apiFetch<void>(`/api/v1${base}/${encodeURIComponent(id)}`, { method: "DELETE" });
+      await apiFetch<void>(`/api/v1/cashflow${base}/${encodeURIComponent(id)}`, { method: "DELETE" });
     },
   };
 }

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>FSH.Modules.Cashflow</RootNamespace>
+		<AssemblyName>FSH.Modules.Cashflow</AssemblyName>
+		<NoWarn>$(NoWarn);CA1031;CA1812;CA1859;S3267</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\BuildingBlocks\Persistence\Persistence.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Web\Web.csproj" />
+		<ProjectReference Include="..\Modules.Cashflow.Contracts\Modules.Cashflow.Contracts.csproj" />
+	</ItemGroup>
+
+</Project>

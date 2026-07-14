@@ -68,26 +68,26 @@ export type ProjectInput = {
 };
 
 export function searchProjects(params: PagedParams = {}): Promise<PagedResponse<ProjectDto>> {
-  return apiFetch<PagedResponse<ProjectDto>>(`/api/v1/projects${pagedQuery(params)}`);
+  return apiFetch<PagedResponse<ProjectDto>>(`/api/v1/cashflow/projects${pagedQuery(params)}`);
 }
 
 export function getProject(id: string): Promise<ProjectDto> {
-  return apiFetch<ProjectDto>(`/api/v1/projects/${encodeURIComponent(id)}`);
+  return apiFetch<ProjectDto>(`/api/v1/cashflow/projects/${encodeURIComponent(id)}`);
 }
 
 export function createProject(input: ProjectInput): Promise<string> {
-  return apiFetch<string>("/api/v1/projects", { method: "POST", body: JSON.stringify(input) });
+  return apiFetch<string>("/api/v1/cashflow/projects", { method: "POST", body: JSON.stringify(input) });
 }
 
 export function updateProject(id: string, input: ProjectInput): Promise<string> {
-  return apiFetch<string>(`/api/v1/projects/${encodeURIComponent(id)}`, {
+  return apiFetch<string>(`/api/v1/cashflow/projects/${encodeURIComponent(id)}`, {
     method: "PUT",
     body: JSON.stringify(input),
   });
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
+  await apiFetch<void>(`/api/v1/cashflow/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 // ───────────────────────────────────────────────────────────────────────
@@ -118,30 +118,30 @@ export type IncomeInput = {
 export function searchIncomes(
   params: PagedParams & { projectId?: string } = {},
 ): Promise<PagedResponse<IncomeDto>> {
-  return apiFetch<PagedResponse<IncomeDto>>(`/api/v1/incomes${pagedQuery(params)}`);
+  return apiFetch<PagedResponse<IncomeDto>>(`/api/v1/cashflow/incomes${pagedQuery(params)}`);
 }
 
 export function createIncome(input: IncomeInput): Promise<string> {
-  return apiFetch<string>("/api/v1/incomes", { method: "POST", body: JSON.stringify(input) });
+  return apiFetch<string>("/api/v1/cashflow/incomes", { method: "POST", body: JSON.stringify(input) });
 }
 
 export function updateIncome(id: string, input: IncomeInput): Promise<string> {
-  return apiFetch<string>(`/api/v1/incomes/${encodeURIComponent(id)}`, {
+  return apiFetch<string>(`/api/v1/cashflow/incomes/${encodeURIComponent(id)}`, {
     method: "PUT",
     body: JSON.stringify(input),
   });
 }
 
 export async function deleteIncome(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/incomes/${encodeURIComponent(id)}`, { method: "DELETE" });
+  await apiFetch<void>(`/api/v1/cashflow/incomes/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export async function confirmIncome(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/incomes/${encodeURIComponent(id)}/confirm`, { method: "POST" });
+  await apiFetch<void>(`/api/v1/cashflow/incomes/${encodeURIComponent(id)}/confirm`, { method: "POST" });
 }
 
 export async function validateIncome(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/incomes/${encodeURIComponent(id)}/validate`, { method: "POST" });
+  await apiFetch<void>(`/api/v1/cashflow/incomes/${encodeURIComponent(id)}/validate`, { method: "POST" });
 }
 
 // ───────────────────────────────────────────────────────────────────────
@@ -172,30 +172,30 @@ export type PaymentInput = {
 export function searchPayments(
   params: PagedParams & { projectId?: string } = {},
 ): Promise<PagedResponse<PaymentDto>> {
-  return apiFetch<PagedResponse<PaymentDto>>(`/api/v1/payments${pagedQuery(params)}`);
+  return apiFetch<PagedResponse<PaymentDto>>(`/api/v1/cashflow/payments${pagedQuery(params)}`);
 }
 
 export function createPayment(input: PaymentInput): Promise<string> {
-  return apiFetch<string>("/api/v1/payments", { method: "POST", body: JSON.stringify(input) });
+  return apiFetch<string>("/api/v1/cashflow/payments", { method: "POST", body: JSON.stringify(input) });
 }
 
 export function updatePayment(id: string, input: PaymentInput): Promise<string> {
-  return apiFetch<string>(`/api/v1/payments/${encodeURIComponent(id)}`, {
+  return apiFetch<string>(`/api/v1/cashflow/payments/${encodeURIComponent(id)}`, {
     method: "PUT",
     body: JSON.stringify(input),
   });
 }
 
 export async function deletePayment(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/payments/${encodeURIComponent(id)}`, { method: "DELETE" });
+  await apiFetch<void>(`/api/v1/cashflow/payments/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export async function confirmPayment(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/payments/${encodeURIComponent(id)}/confirm`, { method: "POST" });
+  await apiFetch<void>(`/api/v1/cashflow/payments/${encodeURIComponent(id)}/confirm`, { method: "POST" });
 }
 
 export async function validatePayment(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/payments/${encodeURIComponent(id)}/validate`, { method: "POST" });
+  await apiFetch<void>(`/api/v1/cashflow/payments/${encodeURIComponent(id)}/validate`, { method: "POST" });
 }
 
 // ───────────────────────────────────────────────────────────────────────
@@ -220,22 +220,22 @@ export type NoteInput = {
 export function searchNotes(
   params: PagedParams & { projectId?: string } = {},
 ): Promise<PagedResponse<NoteDto>> {
-  return apiFetch<PagedResponse<NoteDto>>(`/api/v1/notes${pagedQuery(params)}`);
+  return apiFetch<PagedResponse<NoteDto>>(`/api/v1/cashflow/notes${pagedQuery(params)}`);
 }
 
 export function createNote(input: NoteInput): Promise<string> {
-  return apiFetch<string>("/api/v1/notes", { method: "POST", body: JSON.stringify(input) });
+  return apiFetch<string>("/api/v1/cashflow/notes", { method: "POST", body: JSON.stringify(input) });
 }
 
 export function updateNote(id: string, input: NoteInput): Promise<string> {
-  return apiFetch<string>(`/api/v1/notes/${encodeURIComponent(id)}`, {
+  return apiFetch<string>(`/api/v1/cashflow/notes/${encodeURIComponent(id)}`, {
     method: "PUT",
     body: JSON.stringify(input),
   });
 }
 
 export async function deleteNote(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/notes/${encodeURIComponent(id)}`, { method: "DELETE" });
+  await apiFetch<void>(`/api/v1/cashflow/notes/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 // ───────────────────────────────────────────────────────────────────────
@@ -261,5 +261,5 @@ export type Cashflow = {
 };
 
 export function getCashflow(): Promise<Cashflow> {
-  return apiFetch<Cashflow>("/api/v1/cashflow");
+  return apiFetch<Cashflow>("/api/v1/cashflow/cashflow");
 }
