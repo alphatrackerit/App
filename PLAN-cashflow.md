@@ -189,6 +189,14 @@ Mover no admite medias tintas: un `DbContext` se migra entero.
   (permiso `Reports.View`). Ajustar/renombrar el ledger crudo para Gráficos.
 
 ### Fase 5 — Frontend (§6 de este plan / §7 spec)
+> **✅ COMPLETADA (2026-07-14, commit `b035a3d3`).** `tsc -b && vite build` verde. Hecho: capa de API
+> (`getDailySummary` + catálogos ricos); páginas **Sociedades** y **Prefijos** (jerárquico Grupo→Categoría +
+> activo), **Proveedores** (color+prioridad) y **Estados** (tipo+color) + nav/rutas; form de Proyecto con
+> dropdowns **Sociedad/Categoría**; add-dialog de Pago con **selector de Proveedor**; **calendario** reescrito
+> sobre `/reports/daily-summary` con **color del proveedor predominante**, sombreado de fines de semana, botón
+> **"Hoy"** y detalle por día con proveedor/estado. **Diferido** (follow-up): diálogos de edición de ingreso/pago,
+> tabla de desglose por categoría, scroll infinito por año.
+
 - Repuntar APIs; calendario a `daily-summary` con color/fines de semana/categorías/scroll por año/detalle;
   selector Proveedor en Pago; Sociedad+Categoría en Proyecto; edición de Ingreso/Pago; páginas Society/Prefix;
   enriquecer Supplier/Status; nav consolidado.
