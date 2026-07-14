@@ -156,6 +156,13 @@ Mover no admite medias tintas: un `DbContext` se migra entero.
 - **Checkpoint:** DbMigrator aplica; endpoints responden bajo `/api/v1/cashflow/…`.
 
 ### Fase 2 — Catálogos nuevos + enriquecimientos
+> **✅ COMPLETADA (2026-07-14, commit `c09f2cac`).** Verificado end-to-end contra el stack: migración
+> `AddCashflowCatalogFields` aplicada (tablas `Sociedades`/`Prefijos` + columnas Tipo/ColorHex/PrioridadVisual/
+> campos ricos + rename Codigo→CodigoIso); seed idempotente (7 estados tipados + países + empresa por tenant);
+> `/statuses?type=Proyecto` filtra y devuelve StatusDto con `type`; Supplier con ColorHex/PrioridadVisual;
+> Society (FK a Client) y Prefix (self-ref GRUPO→CATEGORIA) con CRUD; regla no-desactivar-con-proyectos → 409.
+> Enums `StatusType`/`PrefixType` viven en Contracts. UI de los campos nuevos: Fase 5.
+
 - `Status` +Tipo +ColorHex; `Supplier` +ColorHex +PrioridadVisual; `Society` (nuevo); `Prefix` (nuevo
   jerárquico); campos ricos de `Client` (opcional). Slices CRUD+search de Society y Prefix; ampliar CRUD de
   Supplier/Status/Client. Migración de columnas/entidades nuevas. **Seed:** Estados por Tipo
