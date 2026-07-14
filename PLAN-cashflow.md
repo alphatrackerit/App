@@ -169,6 +169,12 @@ Mover no admite medias tintas: un `DbContext` se migra entero.
   (PROYECTO: PREVISTO…; INGRESO: PENDIENTE/CONFIRMADO; PAGO: PENDIENTE/CONFIRMADO), ≥1 País, ≥1 Empresa.
 
 ### Fase 3 — Correcciones de reglas (§3 de este plan / §10 spec)
+> **✅ COMPLETADA (2026-07-14, commit `a01448f5`).** Verificado end-to-end: `Fecha` (Ingresos/Pagos) migrada a
+> `timestamp without time zone` → `/cashflow` serializa `"2026-07-14T00:00:00"` sin offset (day-shift muerto;
+> frontend con getters locales); `Payment.Create` respeta `confirmado`; `Income.Update` preserva flags;
+> estados por defecto (Proyecto→PREVISTO, Ingreso/Pago→PENDIENTE); validador exige Cliente+País (400 sin ellos);
+> recurso permiso `Facturacion` (confirm→204). Revisado adversarialmente (workflow). PrefixId requerido: Fase 5.
+
 - Payment.Create respeta `confirmado`; Update preserva flags; normalización de fecha; estados por defecto;
   recurso `Facturacion` en confirm/validate; invalidación de caché; validadores de obligatorios del proyecto.
 
