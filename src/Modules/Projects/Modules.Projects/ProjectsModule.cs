@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using FSH.Framework.Persistence;
+using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Projects.Data;
 using FSH.Modules.Projects.Features.v1.Cashflow.GetCashflow;
@@ -74,7 +75,9 @@ public sealed class ProjectsModule : IModule
             .MapGroup("api/v{version:apiVersion}")
             .WithTags("Projects")
             .WithApiVersionSet(versionSet)
-            .RequireAuthorization();
+            // Named policy so .RequirePermission() gates run; a bare RequireAuthorization()
+            // swaps in the authenticated-only default policy and skips permission checks.
+            .RequireAuthorization(PermissionConstants.RequiredPermissionPolicyName);
 
         // Projects
         group.MapSearchProjectsEndpoint();

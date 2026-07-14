@@ -76,7 +76,9 @@ public sealed class FilesModule : IModule
         var group = endpoints.MapGroup("api/v{version:apiVersion}/files")
             .WithTags("Files")
             .WithApiVersionSet(versionSet)
-            .RequireAuthorization();
+            // Named policy so .RequirePermission() gates run; a bare RequireAuthorization()
+            // swaps in the authenticated-only default policy and skips permission checks.
+            .RequireAuthorization(PermissionConstants.RequiredPermissionPolicyName);
 
         // Literal routes first so they win over the /{id:guid} catch-all (matches the Catalog
         // pattern for /trash etc.).

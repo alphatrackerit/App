@@ -56,7 +56,9 @@ public sealed class NotificationsModule : IModule
         var group = endpoints.MapGroup("api/v{version:apiVersion}/notifications")
             .WithTags("Notifications")
             .WithApiVersionSet(versionSet)
-            .RequireAuthorization();
+            // Named policy so .RequirePermission() gates run; a bare RequireAuthorization()
+            // swaps in the authenticated-only default policy and skips permission checks.
+            .RequireAuthorization(PermissionConstants.RequiredPermissionPolicyName);
 
         // Literal routes first; /{id:guid}/read is the only param-route and lives last.
         group.MapListNotificationsEndpoint();              // GET /

@@ -11,7 +11,12 @@ var appPrefix = builder.Environment.ApplicationName
 #pragma warning restore CA1308
 
 // Postgres + pgAdmin sidecar (auto-discovers registered databases); persistent so volumes and saved state survive restarts.
-var postgresServer = builder.AddPostgres("postgres")
+// Local-dev: pin a fixed, simple password so the container init and the migrator/API connection string never drift.
+// Aspire's auto-generated password regenerates across runs and contains special chars, which against a *persisted*
+// data volume yields 28P01 "password authentication failed" (the volume keeps the original password). A fixed
+// literal parameter is reused every run, so a persisted volume and a fresh connection string always match.
+var postgresPassword = builder.AddParameter("postgres-password", "fshdevpass2026", secret: true);
+var postgresServer = builder.AddPostgres("postgres", password: postgresPassword)
     .WithDataVolume($"{appPrefix}-postgres-data")
     .WithLifetime(ContainerLifetime.Persistent)
     .WithPgAdmin(pa => pa

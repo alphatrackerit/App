@@ -63,7 +63,9 @@ public sealed class TicketsModule : IModule
             .MapGroup("api/v{version:apiVersion}")
             .WithTags("Tickets")
             .WithApiVersionSet(versionSet)
-            .RequireAuthorization();
+            // Named policy so .RequirePermission() gates run; a bare RequireAuthorization()
+            // swaps in the authenticated-only default policy and skips permission checks.
+            .RequireAuthorization(PermissionConstants.RequiredPermissionPolicyName);
 
         // Trash + comment routes registered before the catch-all
         // `{ticketId:guid}` GET so the literal segments win. Minimal APIs

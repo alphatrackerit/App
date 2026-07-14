@@ -117,6 +117,13 @@ const EstadosPage = lazyNamed(() => import("@/pages/admin/placeholders"), "Estad
 const EmpresasPage = lazyNamed(() => import("@/pages/admin/placeholders"), "EmpresasPage");
 const FlujoDeCajaPage = lazyNamed(() => import("@/pages/projects/cashflow"), "FlujoDeCajaPage");
 const GraficosPage = lazyNamed(() => import("@/pages/projects/graficos"), "GraficosPage");
+const AvicolaPanelPage = lazyNamed(() => import("@/pages/avicola/avicola"), "AvicolaPanelPage");
+const LotesPage = lazyNamed(() => import("@/pages/avicola/lotes"), "LotesPage");
+const LoteDetailPage = lazyNamed(() => import("@/pages/avicola/lote-detail"), "LoteDetailPage");
+const GalponesPage = lazyNamed(() => import("@/pages/avicola/galpones"), "GalponesPage");
+const PedidosPage = lazyNamed(() => import("@/pages/avicola/pedidos"), "PedidosPage");
+const ContabilidadPage = lazyNamed(() => import("@/pages/avicola/contabilidad"), "ContabilidadPage");
+const PreparacionesPage = lazyNamed(() => import("@/pages/avicola/preparaciones"), "PreparacionesPage");
 
 /**
  * RouteFallback — what shows while a lazy chunk is downloading. Mirrors
@@ -225,6 +232,13 @@ export const router = createBrowserRouter([
           { path: "empresas", element: withSuspense(<EmpresasPage />) },
           { path: "flujo-de-caja", element: withSuspense(<FlujoDeCajaPage />) },
           { path: "graficos", element: withSuspense(<GraficosPage />) },
+          { path: "avicola", element: withSuspense(<AvicolaPanelPage />) },
+          { path: "avicola/lotes", element: withSuspense(<LotesPage />) },
+          { path: "avicola/lotes/:loteId", element: withSuspense(<LoteDetailPage />) },
+          { path: "avicola/galpones", element: withSuspense(<GalponesPage />) },
+          { path: "avicola/pedidos", element: withSuspense(<PedidosPage />) },
+          { path: "avicola/contabilidad", element: withSuspense(<ContabilidadPage />) },
+          { path: "avicola/preparaciones", element: withSuspense(<PreparacionesPage />) },
           { path: "admin/proveedores", element: withSuspense(<ProveedoresPage />) },
           { path: "admin/clientes", element: withSuspense(<ClientesPage />) },
           { path: "admin/paises", element: withSuspense(<PaisesPage />) },

@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using FSH.Framework.Persistence;
+using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Administration.Data;
 using FSH.Modules.Administration.Features.v1.Clients;
@@ -54,7 +55,9 @@ public sealed class AdministrationModule : IModule
             .MapGroup("api/v{version:apiVersion}")
             .WithTags("Administration")
             .WithApiVersionSet(versionSet)
-            .RequireAuthorization();
+            // Named policy so .RequirePermission() gates run; a bare RequireAuthorization()
+            // swaps in the authenticated-only default policy and skips permission checks.
+            .RequireAuthorization(PermissionConstants.RequiredPermissionPolicyName);
 
         group.MapSearchClientsEndpoint();
         group.MapCreateClientEndpoint();

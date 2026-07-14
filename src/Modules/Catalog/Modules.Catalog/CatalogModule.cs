@@ -83,7 +83,9 @@ public sealed class CatalogModule : IModule
             .MapGroup("api/v{version:apiVersion}/catalog")
             .WithTags("Catalog")
             .WithApiVersionSet(versionSet)
-            .RequireAuthorization();
+            // Named policy so .RequirePermission() gates run; a bare RequireAuthorization()
+            // swaps in the authenticated-only default policy and skips permission checks.
+            .RequireAuthorization(PermissionConstants.RequiredPermissionPolicyName);
 
         // Trash routes registered first so the literal `/trash` segment wins
         // over the catch-all `/{id:guid}`.

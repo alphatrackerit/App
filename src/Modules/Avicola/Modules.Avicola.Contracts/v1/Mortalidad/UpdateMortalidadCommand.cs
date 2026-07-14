@@ -1,0 +1,12 @@
+using Mediator;
+
+namespace FSH.Modules.Avicola.Contracts.v1.Mortalidad;
+
+public sealed record UpdateMortalidadCommand(
+    Guid MortalidadId,
+    Guid LoteId,
+    DateTimeOffset Fecha,
+    int Cantidad,
+    int? Descartes = null,
+    string? Causa = null,
+    string? Notas = null) : ICommand<Guid>;

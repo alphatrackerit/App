@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using FSH.Framework.Eventing;
 using FSH.Framework.Persistence;
+using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Billing.Data;
 using FSH.Modules.Billing.Features.v1.Invoices.GenerateInvoices;
@@ -74,7 +75,9 @@ public sealed class BillingModule : IModule
             .MapGroup("api/v{version:apiVersion}/billing")
             .WithTags("Billing")
             .WithApiVersionSet(versionSet)
-            .RequireAuthorization();
+            // Named policy so .RequirePermission() gates run; a bare RequireAuthorization()
+            // swaps in the authenticated-only default policy and skips permission checks.
+            .RequireAuthorization(PermissionConstants.RequiredPermissionPolicyName);
 
         group.MapGetPlansEndpoint();
         group.MapCreatePlanEndpoint();

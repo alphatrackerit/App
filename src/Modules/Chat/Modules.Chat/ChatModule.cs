@@ -86,7 +86,9 @@ public sealed class ChatModule : IModule
         var group = endpoints.MapGroup("api/v{version:apiVersion}/chat")
             .WithTags("Chat")
             .WithApiVersionSet(versionSet)
-            .RequireAuthorization();
+            // Named policy so .RequirePermission() gates run; a bare RequireAuthorization()
+            // swaps in the authenticated-only default policy and skips permission checks.
+            .RequireAuthorization(PermissionConstants.RequiredPermissionPolicyName);
 
         // Channel reads — literal routes first
         group.MapListMyChannelsEndpoint();           // GET /channels

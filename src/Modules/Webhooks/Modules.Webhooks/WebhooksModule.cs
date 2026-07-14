@@ -73,7 +73,9 @@ public sealed class WebhooksModule : IModule
             .MapGroup("api/v{version:apiVersion}/webhooks")
             .WithTags("Webhooks")
             .WithApiVersionSet(versionSet)
-            .RequireAuthorization();
+            // Named policy so .RequirePermission() gates run; a bare RequireAuthorization()
+            // swaps in the authenticated-only default policy and skips permission checks.
+            .RequireAuthorization(PermissionConstants.RequiredPermissionPolicyName);
 
         group.MapCreateWebhookSubscriptionEndpoint();
         group.MapDeleteWebhookSubscriptionEndpoint();

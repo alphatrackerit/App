@@ -2,8 +2,10 @@ import {
   Activity,
   ArrowLeftRight,
   BarChart3,
+  Bird,
   Briefcase,
   Building2,
+  Calculator,
   CreditCard,
   Flag,
   FolderOpen,
@@ -17,12 +19,15 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  ShoppingCart,
+  Sparkles,
   Tags,
   Ticket,
   Trash2,
   Truck,
   Users,
   UsersRound,
+  Warehouse,
   Wifi,
   Wrench,
 } from "lucide-react";
@@ -68,10 +73,23 @@ export const sections: NavSection[] = [
     caption: "Proyectos",
     icon: Briefcase,
     items: [
-      { to: "/projects", label: "Proyectos", icon: Briefcase },
-      { to: "/flujo-de-caja", label: "Flujo de caja", icon: ArrowLeftRight },
-      { to: "/graficos", label: "Gráficos", icon: BarChart3 },
-      { to: "/empresas", label: "Empresas", icon: Building2 },
+      { to: "/projects", label: "Proyectos", icon: Briefcase, perm: "Permissions.Projects.Projects.View" },
+      { to: "/flujo-de-caja", label: "Flujo de caja", icon: ArrowLeftRight, perm: "Permissions.Projects.Projects.View" },
+      { to: "/graficos", label: "Gráficos", icon: BarChart3, perm: "Permissions.Projects.Projects.View" },
+      { to: "/empresas", label: "Empresas", icon: Building2, perm: "Permissions.Administration.Companies.View" },
+    ],
+  },
+  {
+    id: "avicola",
+    caption: "Avícola",
+    icon: Bird,
+    items: [
+      { to: "/avicola", label: "Panel", icon: LayoutDashboard, perm: "Permissions.Avicola.Lotes.View" },
+      { to: "/avicola/lotes", label: "Lotes", icon: Bird, perm: "Permissions.Avicola.Lotes.View" },
+      { to: "/avicola/galpones", label: "Galpones", icon: Warehouse, perm: "Permissions.Avicola.Galpones.View" },
+      { to: "/avicola/preparaciones", label: "Preparación", icon: Sparkles, perm: "Permissions.Avicola.Preparaciones.View" },
+      { to: "/avicola/pedidos", label: "Pedidos", icon: ShoppingCart, perm: "Permissions.Avicola.Pedidos.View" },
+      { to: "/avicola/contabilidad", label: "Contabilidad", icon: Calculator, perm: "Permissions.Avicola.Contabilidad.View" },
     ],
   },
   {
@@ -79,10 +97,10 @@ export const sections: NavSection[] = [
     caption: "Administración",
     icon: Wrench,
     items: [
-      { to: "/admin/proveedores", label: "Proveedores", icon: Truck },
-      { to: "/admin/clientes", label: "Clientes", icon: Users },
-      { to: "/admin/paises", label: "Países", icon: Flag },
-      { to: "/admin/estados", label: "Estados", icon: ListChecks },
+      { to: "/admin/proveedores", label: "Proveedores", icon: Truck, perm: "Permissions.Administration.Suppliers.View" },
+      { to: "/admin/clientes", label: "Clientes", icon: Users, perm: "Permissions.Administration.Clients.View" },
+      { to: "/admin/paises", label: "Países", icon: Flag, perm: "Permissions.Administration.Countries.View" },
+      { to: "/admin/estados", label: "Estados", icon: ListChecks, perm: "Permissions.Administration.Statuses.View" },
     ],
   },
   {
@@ -91,8 +109,8 @@ export const sections: NavSection[] = [
     icon: Activity,
     items: [
       { to: "/activity", label: "Live activity", icon: Activity },
-      { to: "/subscription", label: "Subscription", icon: CreditCard },
-      { to: "/invoices", label: "Invoices", icon: Receipt },
+      { to: "/subscription", label: "Subscription", icon: CreditCard, perm: "Permissions.Billing.View" },
+      { to: "/invoices", label: "Invoices", icon: Receipt, perm: "Permissions.Billing.View" },
     ],
   },
   {
@@ -100,9 +118,9 @@ export const sections: NavSection[] = [
     caption: "Catalog",
     icon: Package,
     items: [
-      { to: "/catalog/products", label: "Products", icon: Package },
-      { to: "/catalog/brands", label: "Brands", icon: Tags },
-      { to: "/catalog/categories", label: "Categories", icon: FolderTree },
+      { to: "/catalog/products", label: "Products", icon: Package, perm: "Permissions.Catalog.Products.View" },
+      { to: "/catalog/brands", label: "Brands", icon: Tags, perm: "Permissions.Catalog.Brands.View" },
+      { to: "/catalog/categories", label: "Categories", icon: FolderTree, perm: "Permissions.Catalog.Categories.View" },
     ],
   },
   {
@@ -110,7 +128,7 @@ export const sections: NavSection[] = [
     caption: "Helpdesk",
     icon: Ticket,
     items: [
-      { to: "/tickets", label: "Tickets", icon: Ticket },
+      { to: "/tickets", label: "Tickets", icon: Ticket, perm: "Permissions.Tickets.View" },
     ],
   },
   {
@@ -118,9 +136,9 @@ export const sections: NavSection[] = [
     caption: "Identity",
     icon: Users,
     items: [
-      { to: "/identity/users", label: "Users", icon: Users },
-      { to: "/identity/roles", label: "Roles", icon: ShieldCheck },
-      { to: "/identity/groups", label: "Groups", icon: UsersRound },
+      { to: "/identity/users", label: "Users", icon: Users, perm: "Permissions.Users.View" },
+      { to: "/identity/roles", label: "Roles", icon: ShieldCheck, perm: "Permissions.Roles.View" },
+      { to: "/identity/groups", label: "Groups", icon: UsersRound, perm: "Permissions.Groups.View" },
     ],
   },
   {
@@ -131,7 +149,7 @@ export const sections: NavSection[] = [
       { to: "/system/health", label: "Health", icon: HeartPulse },
       { to: "/system/audits", label: "Audit trail", icon: ScrollText, perm: "Permissions.AuditTrails.View" },
       { to: "/system/sessions", label: "Sessions", icon: Wifi, perm: "Permissions.Sessions.ViewAll" },
-      { to: "/system/trash", label: "Trash", icon: Trash2 },
+      { to: "/system/trash", label: "Trash", icon: Trash2, perm: "Permissions.Catalog.Products.Restore" },
     ],
   },
 ];
