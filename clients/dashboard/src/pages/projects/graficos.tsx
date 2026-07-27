@@ -68,7 +68,7 @@ export function GraficosPage() {
   const cashflowQ = useQuery({ queryKey: ["cashflow"], queryFn: getCashflow });
   const projectsQ = useQuery({
     queryKey: ["projects", "list", { all: true }],
-    queryFn: () => searchProjects({ pageSize: 200, sortBy: "name", sortDir: "asc" }),
+    queryFn: () => searchProjects({ pageSize: 10000, sortBy: "name", sortDir: "asc" }),
   });
 
   const cashflow = cashflowQ.data;

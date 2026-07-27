@@ -13,13 +13,13 @@ public static class ValidatePaymentEndpoint
     internal static RouteHandlerBuilder MapValidatePaymentEndpoint(this IEndpointRouteBuilder endpoints)
     {
         return endpoints.MapPost("/payments/{id:guid}/validate",
-                async (Guid id, IMediator mediator, CancellationToken ct) =>
+                async (Guid id, bool? value, IMediator mediator, CancellationToken ct) =>
                 {
-                    await mediator.Send(new ValidatePaymentCommand(id), ct);
+                    await mediator.Send(new ValidatePaymentCommand(id, value ?? true), ct);
                     return Results.NoContent();
                 })
             .WithName("ValidatePayment")
-            .WithSummary("Mark a payment as validated")
+            .WithSummary("Set the validated flag of a payment (value=false to clear)")
             .RequirePermission(CashflowPermissions.Facturacion.ValidatePago);
     }
 }

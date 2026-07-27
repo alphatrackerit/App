@@ -62,7 +62,7 @@ export function PreparacionesPage() {
   const [pageNumber, setPageNumber] = useState(1);
   const [editor, setEditor] = useState<EditorState>({ mode: "closed" });
 
-  const galponesQ = useQuery({ queryKey: ["avicola", "galpones", "options"], queryFn: () => searchGalpones({ pageSize: 200, sortBy: "nombre", sortDir: "asc" }) });
+  const galponesQ = useQuery({ queryKey: ["avicola", "galpones", "options"], queryFn: () => searchGalpones({ pageSize: 10000, sortBy: "nombre", sortDir: "asc" }) });
   const galponName = (id: string | null) => galponesQ.data?.items.find((g) => g.id === id)?.nombre ?? "—";
 
   const query = useQuery({
@@ -155,8 +155,8 @@ function PreparacionEditorDialog({ state, onClose }: { state: EditorState; onClo
   const prep = state.mode === "edit" ? state.prep : undefined;
   const queryClient = useQueryClient();
 
-  const galponesQ = useQuery({ queryKey: ["avicola", "galpones", "options"], queryFn: () => searchGalpones({ pageSize: 200, sortBy: "nombre", sortDir: "asc" }), enabled: isOpen });
-  const lotesQ = useQuery({ queryKey: ["avicola", "lotes", "options"], queryFn: () => searchLotes({ pageSize: 200, sortBy: "fechaIngreso", sortDir: "desc" }), enabled: isOpen });
+  const galponesQ = useQuery({ queryKey: ["avicola", "galpones", "options"], queryFn: () => searchGalpones({ pageSize: 10000, sortBy: "nombre", sortDir: "asc" }), enabled: isOpen });
+  const lotesQ = useQuery({ queryKey: ["avicola", "lotes", "options"], queryFn: () => searchLotes({ pageSize: 10000, sortBy: "fechaIngreso", sortDir: "desc" }), enabled: isOpen });
   const galponOpts: ComboboxOption[] = (galponesQ.data?.items ?? []).map((g) => ({ value: g.id, label: g.nombre }));
   const loteOpts: ComboboxOption[] = (lotesQ.data?.items ?? []).map((l) => ({ value: l.id, label: l.codigo }));
 

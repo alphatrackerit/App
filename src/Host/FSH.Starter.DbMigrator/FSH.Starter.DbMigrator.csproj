@@ -28,6 +28,10 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <!-- Design-time only: lets `dotnet ef migrations add` use this project as startup
+         while the Api host is running (its binaries are locked). Main() builds the host
+         before any DB access, so EF's HostFactoryResolver aborts safely at Build(). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

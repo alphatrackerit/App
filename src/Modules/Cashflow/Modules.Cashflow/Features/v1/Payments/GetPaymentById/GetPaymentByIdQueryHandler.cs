@@ -21,6 +21,6 @@ public sealed class GetPaymentByIdQueryHandler(CashflowDbContext dbContext)
             ?? throw new NotFoundException($"Payment {query.PaymentId} not found.");
 
         return new PaymentDto(
-            p.Id, p.Amount, p.Description, p.Date, p.Percentage, p.SupplierId, p.ProjectId, p.StatusId, p.Confirmed, p.Validated);
+            p.Id, p.Amount, p.Description, p.Date, p.Percentage, p.SupplierId, p.ProjectId, p.StatusId, p.Confirmed, p.Validated, p.InvoiceId);
     }
 }

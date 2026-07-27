@@ -157,6 +157,10 @@ export function EntityFilterPill<T extends string | boolean | null>({
 //  dentalOS patient list pagination shape.
 // ───────────────────────────────────────────────────────────────────────
 
+/** Sentinel page size meaning "Todos" — must stay within the backend's 10000 cap. */
+export const PAGE_SIZE_ALL = 10000;
+const PAGE_SIZE_CHOICES = [10, 20, 50, 100, PAGE_SIZE_ALL] as const;
+
 export function EntityPager({
   page,
   totalPages,
@@ -164,6 +168,8 @@ export function EntityPager({
   hasNext,
   onPrev,
   onNext,
+  pageSize,
+  onPageSizeChange,
 }: {
   page: number;
   totalPages: number;
@@ -171,13 +177,40 @@ export function EntityPager({
   hasNext: boolean;
   onPrev: () => void;
   onNext: () => void;
+  /** When provided (together with onPageSizeChange), shows the "Nº registros" selector. */
+  pageSize?: number;
+  onPageSizeChange?: (size: number) => void;
 }) {
-  if (totalPages <= 1) return null;
+  const sizer =
+    pageSize !== undefined && onPageSizeChange ? (
+      <label className="flex items-center gap-1.5 text-[11px] text-[var(--color-muted-foreground)]">
+        Nº registros
+        <select
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          aria-label="Registros por página"
+          className="h-7 cursor-pointer rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-1.5 text-[12px] text-[var(--color-foreground)] outline-none focus:border-[var(--color-primary)]"
+        >
+          {PAGE_SIZE_CHOICES.map((n) => (
+            <option key={n} value={n}>
+              {n === PAGE_SIZE_ALL ? "Todos" : n}
+            </option>
+          ))}
+        </select>
+      </label>
+    ) : null;
+
+  if (totalPages <= 1 && !sizer) return null;
   return (
-    <div className="mt-3 flex items-center justify-between">
-      <p className="text-[11px] text-[var(--color-muted-foreground)]">
-        Page {page} of {totalPages}
-      </p>
+    <div className="mt-3 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-4">
+        {sizer}
+        {totalPages > 1 && (
+          <p className="text-[11px] text-[var(--color-muted-foreground)]">
+            Página {page} de {totalPages}
+          </p>
+        )}
+      </div>
       <div className="flex items-center gap-1">
         <button
           type="button"
@@ -384,6 +417,11 @@ export function EntityInitialsAvatar({
       .join("")
       .slice(0, 2)
       .toUpperCase() || "·";
+  // Nombres con código numérico delante ("551.25 PV KALKAN…") muestran el código, no iniciales.
+  const numMatch = name.trim().match(/^(\d+(?:[.,]\d+)*)/);
+  const label = numMatch ? numMatch[1] : initials;
+  const base = size <= 32 ? 10 : size <= 40 ? 12 : 14;
+  const fontSize = label.length <= 2 ? base : Math.max(8, Math.min(base, Math.floor((size * 1.5) / label.length)));
   return (
     <span
       aria-hidden
@@ -395,11 +433,8 @@ export function EntityInitialsAvatar({
         className,
       )}
     >
-      <span
-        className="font-display font-bold text-[var(--color-primary)]"
-        style={{ fontSize: size <= 32 ? 10 : size <= 40 ? 12 : 14 }}
-      >
-        {initials}
+      <span className="font-display font-bold tabular-nums text-[var(--color-primary)]" style={{ fontSize }}>
+        {label}
       </span>
     </span>
   );

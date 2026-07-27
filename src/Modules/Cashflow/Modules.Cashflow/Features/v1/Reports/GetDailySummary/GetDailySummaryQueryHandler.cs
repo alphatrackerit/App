@@ -18,31 +18,26 @@ public sealed class GetDailySummaryQueryHandler(CashflowDbContext db)
         ArgumentNullException.ThrowIfNull(query);
 
         // ── Resolve the project-level filters (empresa / proyecto / estado del proyecto) to a project-id set. ──
-        bool projectFiltered = query.ProjectIds is { Count: > 0 }
-            || query.CompanyIds is { Count: > 0 }
-            || query.StatusIds is { Count: > 0 };
-
-        List<Guid>? allowedProjectIds = null;
-        if (projectFiltered)
+        // Always applied: projects of a company hidden from Proyectos (ShowInProjects = false)
+        // never operate in the cash flow. Projects without a company are unaffected.
+        var pq = db.Projects.AsNoTracking()
+            .Where(p => p.CompanyId == null || db.Companies.Any(c => c.Id == p.CompanyId && c.ShowInProjects));
+        if (query.ProjectIds is { Count: > 0 })
         {
-            var pq = db.Projects.AsNoTracking().AsQueryable();
-            if (query.ProjectIds is { Count: > 0 })
-            {
-                pq = pq.Where(p => query.ProjectIds.Contains(p.Id));
-            }
-            if (query.CompanyIds is { Count: > 0 })
-            {
-                pq = pq.Where(p => p.CompanyId != null && query.CompanyIds.Contains(p.CompanyId.Value));
-            }
-            if (query.StatusIds is { Count: > 0 })
-            {
-                pq = pq.Where(p => p.StatusId != null && query.StatusIds.Contains(p.StatusId.Value));
-            }
-            allowedProjectIds = await pq.Select(p => p.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
-            if (allowedProjectIds.Count == 0)
-            {
-                return [];
-            }
+            pq = pq.Where(p => query.ProjectIds.Contains(p.Id));
+        }
+        if (query.CompanyIds is { Count: > 0 })
+        {
+            pq = pq.Where(p => p.CompanyId != null && query.CompanyIds.Contains(p.CompanyId.Value));
+        }
+        if (query.StatusIds is { Count: > 0 })
+        {
+            pq = pq.Where(p => p.StatusId != null && query.StatusIds.Contains(p.StatusId.Value));
+        }
+        List<Guid> allowedProjectIds = await pq.Select(p => p.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
+        if (allowedProjectIds.Count == 0)
+        {
+            return [];
         }
 
         DateTime? fromInclusive = query.From?.Date;
@@ -71,11 +66,8 @@ public sealed class GetDailySummaryQueryHandler(CashflowDbContext db)
             incQ = incQ.Where(i => i.Validated);
             payQ = payQ.Where(p => p.Validated);
         }
-        if (allowedProjectIds is not null)
-        {
-            incQ = incQ.Where(i => i.ProjectId != null && allowedProjectIds.Contains(i.ProjectId.Value));
-            payQ = payQ.Where(p => p.ProjectId != null && allowedProjectIds.Contains(p.ProjectId.Value));
-        }
+        incQ = incQ.Where(i => i.ProjectId != null && allowedProjectIds.Contains(i.ProjectId.Value));
+        payQ = payQ.Where(p => p.ProjectId != null && allowedProjectIds.Contains(p.ProjectId.Value));
 
         var incomes = await incQ.ToListAsync(cancellationToken).ConfigureAwait(false);
         var payments = await payQ.ToListAsync(cancellationToken).ConfigureAwait(false);

@@ -69,7 +69,9 @@ export type ProjectInput = {
   prefixId?: string | null;
 };
 
-export function searchProjects(params: PagedParams = {}): Promise<PagedResponse<ProjectDto>> {
+export function searchProjects(
+  params: PagedParams & { companyId?: string } = {},
+): Promise<PagedResponse<ProjectDto>> {
   return apiFetch<PagedResponse<ProjectDto>>(`/api/v1/cashflow/projects${pagedQuery(params)}`);
 }
 
@@ -104,6 +106,7 @@ export type IncomeDto = {
   percentage: number | null;
   projectId: string | null;
   statusId: string | null;
+  invoiceId: string | null;
   confirmed: boolean;
   validated: boolean;
 };
@@ -114,11 +117,13 @@ export type IncomeInput = {
   date?: string | null;
   percentage?: number | null;
   projectId?: string | null;
+  statusId?: string | null;
+  invoiceId?: string | null;
   confirmed?: boolean;
 };
 
 export function searchIncomes(
-  params: PagedParams & { projectId?: string } = {},
+  params: PagedParams & { projectId?: string; unlinked?: boolean } = {},
 ): Promise<PagedResponse<IncomeDto>> {
   return apiFetch<PagedResponse<IncomeDto>>(`/api/v1/cashflow/incomes${pagedQuery(params)}`);
 }
@@ -138,12 +143,12 @@ export async function deleteIncome(id: string): Promise<void> {
   await apiFetch<void>(`/api/v1/cashflow/incomes/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
-export async function confirmIncome(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/cashflow/incomes/${encodeURIComponent(id)}/confirm`, { method: "POST" });
+export async function confirmIncome(id: string, value = true): Promise<void> {
+  await apiFetch<void>(`/api/v1/cashflow/incomes/${encodeURIComponent(id)}/confirm?value=${value}`, { method: "POST" });
 }
 
-export async function validateIncome(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/cashflow/incomes/${encodeURIComponent(id)}/validate`, { method: "POST" });
+export async function validateIncome(id: string, value = true): Promise<void> {
+  await apiFetch<void>(`/api/v1/cashflow/incomes/${encodeURIComponent(id)}/validate?value=${value}`, { method: "POST" });
 }
 
 // ───────────────────────────────────────────────────────────────────────
@@ -159,6 +164,7 @@ export type PaymentDto = {
   supplierId: string | null;
   projectId: string | null;
   statusId: string | null;
+  invoiceId: string | null;
   confirmed: boolean;
   validated: boolean;
 };
@@ -170,11 +176,13 @@ export type PaymentInput = {
   percentage?: number | null;
   supplierId?: string | null;
   projectId?: string | null;
+  statusId?: string | null;
+  invoiceId?: string | null;
   confirmed?: boolean;
 };
 
 export function searchPayments(
-  params: PagedParams & { projectId?: string } = {},
+  params: PagedParams & { projectId?: string; unlinked?: boolean } = {},
 ): Promise<PagedResponse<PaymentDto>> {
   return apiFetch<PagedResponse<PaymentDto>>(`/api/v1/cashflow/payments${pagedQuery(params)}`);
 }
@@ -194,12 +202,12 @@ export async function deletePayment(id: string): Promise<void> {
   await apiFetch<void>(`/api/v1/cashflow/payments/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
-export async function confirmPayment(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/cashflow/payments/${encodeURIComponent(id)}/confirm`, { method: "POST" });
+export async function confirmPayment(id: string, value = true): Promise<void> {
+  await apiFetch<void>(`/api/v1/cashflow/payments/${encodeURIComponent(id)}/confirm?value=${value}`, { method: "POST" });
 }
 
-export async function validatePayment(id: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/cashflow/payments/${encodeURIComponent(id)}/validate`, { method: "POST" });
+export async function validatePayment(id: string, value = true): Promise<void> {
+  await apiFetch<void>(`/api/v1/cashflow/payments/${encodeURIComponent(id)}/validate?value=${value}`, { method: "POST" });
 }
 
 // ───────────────────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ public sealed class CashflowDbContext : BaseDbContext
     public DbSet<Income> Incomes => Set<Income>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Note> Notes => Set<Note>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
 
     // Catalog master-data (consolidated from the former Administration module)
     public DbSet<Client> Clients => Set<Client>();
@@ -33,6 +34,10 @@ public sealed class CashflowDbContext : BaseDbContext
     public DbSet<Status> Statuses => Set<Status>();
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Prefix> Prefixes => Set<Prefix>();
+
+    // Bank statement import (spec §33, optional)
+    public DbSet<Bank> Banks => Set<Bank>();
+    public DbSet<BankMovement> BankMovements => Set<BankMovement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

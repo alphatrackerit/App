@@ -261,12 +261,12 @@ function LoteEditorDialog({ state, onClose }: { state: EditorState; onClose: () 
 
   const galponesQ = useQuery({
     queryKey: ["avicola", "galpones", "options"],
-    queryFn: () => searchGalpones({ pageSize: 200, sortBy: "nombre", sortDir: "asc" }),
+    queryFn: () => searchGalpones({ pageSize: 10000, sortBy: "nombre", sortDir: "asc" }),
     enabled: isOpen,
   });
   const proveedoresQ = useQuery({
     queryKey: ["administration", "suppliers", "options"],
-    queryFn: () => suppliersApi.search({ pageSize: 200, sortBy: "name", sortDir: "asc" }),
+    queryFn: () => suppliersApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }),
     enabled: isOpen,
   });
 

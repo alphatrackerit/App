@@ -40,6 +40,14 @@ public sealed class CashflowDbInitializer(
         (StatusType.Ingreso, "CONFIRMADO"),
         (StatusType.Pago, "PENDIENTE"),
         (StatusType.Pago, "CONFIRMADO"),
+        (StatusType.FacturaEmitida, "BORRADOR"),
+        (StatusType.FacturaEmitida, "EMITIDA"),
+        (StatusType.FacturaEmitida, "COBRADA PARCIAL"),
+        (StatusType.FacturaEmitida, "COBRADA"),
+        (StatusType.FacturaEmitida, "VENCIDA"),
+        (StatusType.FacturaRecibida, "PENDIENTE"),
+        (StatusType.FacturaRecibida, "PAGADA PARCIAL"),
+        (StatusType.FacturaRecibida, "PAGADA"),
     ];
 
     private async Task SeedStatusesAsync(CancellationToken cancellationToken)

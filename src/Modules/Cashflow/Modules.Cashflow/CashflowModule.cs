@@ -23,6 +23,20 @@ using FSH.Modules.Cashflow.Features.v1.Payments.GetPaymentById;
 using FSH.Modules.Cashflow.Features.v1.Payments.SearchPayments;
 using FSH.Modules.Cashflow.Features.v1.Payments.UpdatePayment;
 using FSH.Modules.Cashflow.Features.v1.Payments.ValidatePayment;
+using FSH.Modules.Cashflow.Features.v1.Invoices.CreateInvoice;
+using FSH.Modules.Cashflow.Features.v1.Invoices.UpdateInvoice;
+using FSH.Modules.Cashflow.Features.v1.Invoices.DeleteInvoice;
+using FSH.Modules.Cashflow.Features.v1.Invoices.GetInvoiceById;
+using FSH.Modules.Cashflow.Features.v1.Invoices.SearchInvoices;
+using FSH.Modules.Cashflow.Features.v1.Invoices.LinkLineToInvoice;
+using FSH.Modules.Cashflow.Features.v1.Invoices.GetLinkSuggestions;
+using FSH.Modules.Cashflow.Features.v1.Invoices.ApplyLinkSuggestions;
+using FSH.Modules.Cashflow.Features.v1.Invoices.GenerateMilestones;
+using FSH.Modules.Cashflow.Features.v1.Invoices.MarkInvoiceVerified;
+using FSH.Modules.Cashflow.Features.v1.Invoices.GetInvoiceLines;
+using FSH.Modules.Cashflow.Features.v1.Invoices.ExtractInvoice;
+using FSH.Modules.Cashflow.Features.v1.Invoices.AttachInvoiceDocument;
+using FSH.Modules.Cashflow.Features.v1.Invoices.GetInvoiceDocument;
 using FSH.Modules.Cashflow.Features.v1.Projects.CreateProject;
 using FSH.Modules.Cashflow.Features.v1.Projects.DeleteProject;
 using FSH.Modules.Cashflow.Features.v1.Projects.GetProjectById;
@@ -35,7 +49,10 @@ using FSH.Modules.Cashflow.Features.v1.Statuses;
 using FSH.Modules.Cashflow.Features.v1.Companies;
 using FSH.Modules.Cashflow.Features.v1.Societies;
 using FSH.Modules.Cashflow.Features.v1.Prefixes;
+using FSH.Modules.Cashflow.Features.v1.Banks;
+using FSH.Modules.Cashflow.Features.v1.BankMovements;
 using FSH.Modules.Cashflow.Features.v1.Reports.GetDailySummary;
+using FSH.Modules.Cashflow.Features.v1.Reports.GetInvoicesReport;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -58,6 +75,10 @@ public sealed class CashflowModule : IModule
 
         builder.Services.AddHeroDbContext<CashflowDbContext>();
         builder.Services.AddScoped<IDbInitializer, CashflowDbInitializer>();
+
+        // AI-assisted invoice extraction (CashflowAi__ApiKey / ANTHROPIC_API_KEY at runtime).
+        builder.Services.Configure<CashflowAiOptions>(
+            builder.Configuration.GetSection(CashflowAiOptions.SectionName));
 
         builder.Services.AddHealthChecks()
             .AddDbContextCheck<CashflowDbContext>(
@@ -112,6 +133,22 @@ public sealed class CashflowModule : IModule
         group.MapConfirmPaymentEndpoint();
         group.MapValidatePaymentEndpoint();
 
+        // Invoices (facturación)
+        group.MapSearchInvoicesEndpoint();
+        group.MapCreateInvoiceEndpoint();
+        group.MapGetInvoiceByIdEndpoint();
+        group.MapGetInvoiceLinesEndpoint();
+        group.MapUpdateInvoiceEndpoint();
+        group.MapDeleteInvoiceEndpoint();
+        group.MapLinkLineToInvoiceEndpoint();
+        group.MapGetLinkSuggestionsEndpoint();
+        group.MapApplyLinkSuggestionsEndpoint();
+        group.MapGenerateMilestonesEndpoint();
+        group.MapMarkInvoiceVerifiedEndpoint();
+        group.MapExtractInvoiceEndpoint();
+        group.MapAttachInvoiceDocumentEndpoint();
+        group.MapGetInvoiceDocumentEndpoint();
+
         // Notes
         group.MapSearchNotesEndpoint();
         group.MapCreateNoteEndpoint();
@@ -165,7 +202,20 @@ public sealed class CashflowModule : IModule
         group.MapUpdatePrefixEndpoint();
         group.MapDeletePrefixEndpoint();
 
+        // Banks (statement-import column mapping — spec §33)
+        group.MapSearchBanksEndpoint();
+        group.MapCreateBankEndpoint();
+        group.MapUpdateBankEndpoint();
+        group.MapDeleteBankEndpoint();
+
+        // Bank movements
+        group.MapSearchBankMovementsEndpoint();
+        group.MapCreateBankMovementEndpoint();
+        group.MapUpdateBankMovementEndpoint();
+        group.MapDeleteBankMovementEndpoint();
+
         // Reports (server-side aggregation)
         group.MapGetDailySummaryEndpoint();
+        group.MapGetInvoicesReportEndpoint();
     }
 }

@@ -16,13 +16,18 @@ public sealed class SearchPaymentsQueryHandler(CashflowDbContext dbContext)
         ArgumentNullException.ThrowIfNull(query);
 
         int page = query.PageNumber < 1 ? 1 : query.PageNumber;
-        int size = query.PageSize is < 1 or > 200 ? 20 : query.PageSize;
+        int size = query.PageSize is < 1 or > 10000 ? 20 : query.PageSize;
 
         var q = dbContext.Payments.AsNoTracking().AsQueryable();
 
         if (query.ProjectId.HasValue)
         {
             q = q.Where(p => p.ProjectId == query.ProjectId.Value);
+        }
+
+        if (query.Unlinked == true)
+        {
+            q = q.Where(p => p.InvoiceId == null);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -44,7 +49,7 @@ public sealed class SearchPaymentsQueryHandler(CashflowDbContext dbContext)
         {
             Items = items
                 .Select(p => new PaymentDto(
-                    p.Id, p.Amount, p.Description, p.Date, p.Percentage, p.SupplierId, p.ProjectId, p.StatusId, p.Confirmed, p.Validated))
+                    p.Id, p.Amount, p.Description, p.Date, p.Percentage, p.SupplierId, p.ProjectId, p.StatusId, p.Confirmed, p.Validated, p.InvoiceId))
                 .ToList(),
             PageNumber = page,
             PageSize = size,

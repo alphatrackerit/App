@@ -9,10 +9,11 @@ public sealed class Company : AggregateRoot<Guid>
 
     public string? LegalName { get; private set; }          // RazonSocial
     public string? TaxRegistration { get; private set; }    // RegistroFiscal
+    public bool ShowInProjects { get; private set; }        // VisibleEnProyectos — appears as a card in Proyectos
 
     private Company() { }
 
-    public static Company Create(string name, string? code, string? legalName, string? taxRegistration)
+    public static Company Create(string name, string? code, string? legalName, string? taxRegistration, bool showInProjects = true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         return new Company
@@ -22,15 +23,17 @@ public sealed class Company : AggregateRoot<Guid>
             Code = code?.Trim(),
             LegalName = legalName?.Trim(),
             TaxRegistration = taxRegistration?.Trim(),
+            ShowInProjects = showInProjects,
         };
     }
 
-    public void Update(string name, string? code, string? legalName, string? taxRegistration)
+    public void Update(string name, string? code, string? legalName, string? taxRegistration, bool showInProjects)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name.Trim();
         Code = code?.Trim();
         LegalName = legalName?.Trim();
         TaxRegistration = taxRegistration?.Trim();
+        ShowInProjects = showInProjects;
     }
 }

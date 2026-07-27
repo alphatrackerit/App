@@ -14,7 +14,7 @@ public sealed class CreateCompanyCommandHandler(CashflowDbContext db) : ICommand
     public async ValueTask<Guid> Handle(CreateCompanyCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var entity = Company.Create(command.Name, command.Code, command.LegalName, command.TaxRegistration);
+        var entity = Company.Create(command.Name, command.Code, command.LegalName, command.TaxRegistration, command.ShowInProjects);
         db.Companies.Add(entity);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
@@ -39,7 +39,7 @@ public sealed class UpdateCompanyCommandHandler(CashflowDbContext db) : ICommand
         ArgumentNullException.ThrowIfNull(command);
         var entity = await db.Companies.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Company {command.Id} not found.");
-        entity.Update(command.Name, command.Code, command.LegalName, command.TaxRegistration);
+        entity.Update(command.Name, command.Code, command.LegalName, command.TaxRegistration, command.ShowInProjects);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
     }
@@ -81,13 +81,18 @@ public sealed class SearchCompaniesQueryHandler(CashflowDbContext db) : IQueryHa
     {
         ArgumentNullException.ThrowIfNull(query);
         int page = query.PageNumber < 1 ? 1 : query.PageNumber;
-        int size = query.PageSize is < 1 or > 200 ? 20 : query.PageSize;
+        int size = query.PageSize is < 1 or > 10000 ? 20 : query.PageSize;
 
         var q = db.Companies.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             string t = query.Search.Trim();
             q = q.Where(x => EF.Functions.ILike(x.Name, $"%{t}%") || (x.Code != null && EF.Functions.ILike(x.Code, $"%{t}%")));
+        }
+
+        if (query.ShowInProjects is bool showInProjects)
+        {
+            q = q.Where(x => x.ShowInProjects == showInProjects);
         }
         bool desc = string.Equals(query.SortDir, "desc", StringComparison.OrdinalIgnoreCase);
         bool byCode = string.Equals(query.SortBy, "code", StringComparison.OrdinalIgnoreCase);
@@ -103,7 +108,7 @@ public sealed class SearchCompaniesQueryHandler(CashflowDbContext db) : IQueryHa
         var items = await q.Skip((page - 1) * size).Take(size).ToListAsync(cancellationToken).ConfigureAwait(false);
         return new PagedResponse<CompanyDto>
         {
-            Items = items.Select(x => new CompanyDto(x.Id, x.Name, x.Code, x.LegalName, x.TaxRegistration)).ToList(),
+            Items = items.Select(x => new CompanyDto(x.Id, x.Name, x.Code, x.LegalName, x.TaxRegistration, x.ShowInProjects)).ToList(),
             PageNumber = page,
             PageSize = size,
             TotalCount = total,
@@ -117,6 +122,6 @@ public sealed class SearchCompaniesQueryValidator : AbstractValidator<SearchComp
     public SearchCompaniesQueryValidator()
     {
         RuleFor(x => x.PageNumber).GreaterThanOrEqualTo(1);
-        RuleFor(x => x.PageSize).InclusiveBetween(1, 200);
+        RuleFor(x => x.PageSize).InclusiveBetween(1, 10000);
     }
 }

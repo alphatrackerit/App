@@ -13,13 +13,13 @@ public static class ValidateIncomeEndpoint
     internal static RouteHandlerBuilder MapValidateIncomeEndpoint(this IEndpointRouteBuilder endpoints)
     {
         return endpoints.MapPost("/incomes/{id:guid}/validate",
-                async (Guid id, IMediator mediator, CancellationToken ct) =>
+                async (Guid id, bool? value, IMediator mediator, CancellationToken ct) =>
                 {
-                    await mediator.Send(new ValidateIncomeCommand(id), ct);
+                    await mediator.Send(new ValidateIncomeCommand(id, value ?? true), ct);
                     return Results.NoContent();
                 })
             .WithName("ValidateIncome")
-            .WithSummary("Mark an income as validated")
+            .WithSummary("Set the validated flag of an income (value=false to clear)")
             .RequirePermission(CashflowPermissions.Facturacion.ValidateIncome);
     }
 }

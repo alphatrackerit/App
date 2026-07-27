@@ -682,13 +682,13 @@ function ProductEditorDialog({
 
   const brandsQuery = useQuery({
     queryKey: ["catalog", "brands", "all-for-products-filter"],
-    queryFn: () => searchBrands({ pageSize: 200 }),
+    queryFn: () => searchBrands({ pageSize: 10000 }),
     staleTime: 60_000,
     enabled: open,
   });
   const categoriesQuery = useQuery({
     queryKey: ["catalog", "categories", "all-for-products-filter"],
-    queryFn: () => searchCategories({ pageSize: 200 }),
+    queryFn: () => searchCategories({ pageSize: 10000 }),
     staleTime: 60_000,
     enabled: open,
   });

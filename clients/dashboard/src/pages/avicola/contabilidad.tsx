@@ -40,7 +40,7 @@ export function ContabilidadPage() {
   const [loteId, setLoteId] = useState<string | null>(null);
   const [movEditor, setMovEditor] = useState<MovEditor>({ mode: "closed" });
 
-  const lotesQ = useQuery({ queryKey: ["avicola", "lotes", "options"], queryFn: () => searchLotes({ pageSize: 200, sortBy: "fechaIngreso", sortDir: "desc" }) });
+  const lotesQ = useQuery({ queryKey: ["avicola", "lotes", "options"], queryFn: () => searchLotes({ pageSize: 10000, sortBy: "fechaIngreso", sortDir: "desc" }) });
   const loteOpts: ComboboxOption[] = (lotesQ.data?.items ?? []).map((l) => ({ value: l.id, label: l.codigo }));
 
   const cont = useQuery({

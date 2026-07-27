@@ -12,6 +12,7 @@ export {
   EntitySearch,
   EntityFilterPill,
   EntityPager,
+  PAGE_SIZE_ALL,
   EntityEmpty,
   EntityListCard,
   EntityListHeader,
@@ -22,6 +23,7 @@ export {
   EntityListLoading,
   type EntityStatusTone,
 } from "./entity-shell";
+export { EntityColHeader, EntityFilterEmptyRow, useTableControls, type ColValue, type SortState } from "./table-controls";
 export {
   EntityDetailBack,
   EntityDetailHero,

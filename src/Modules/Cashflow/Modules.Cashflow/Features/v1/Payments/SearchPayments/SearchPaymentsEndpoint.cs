@@ -14,7 +14,7 @@ public static class SearchPaymentsEndpoint
     {
         return endpoints.MapGet("/payments",
                 (string? search, int? pageNumber, int? pageSize, string? sortBy, string? sortDir, Guid? projectId,
-                 IMediator mediator, CancellationToken ct) =>
+                 bool? unlinked, IMediator mediator, CancellationToken ct) =>
                     mediator.Send(
                         new SearchPaymentsQuery(
                             search,
@@ -22,7 +22,8 @@ public static class SearchPaymentsEndpoint
                             pageSize ?? 20,
                             sortBy,
                             sortDir,
-                            projectId),
+                            projectId,
+                            unlinked),
                         ct))
             .WithName("SearchPayments")
             .WithSummary("Search payments (paged, sortable, filter by project)")

@@ -23,6 +23,102 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.Bank", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AmountColumn")
+                        .HasColumnType("integer")
+                        .HasColumnName("ImporteColumna");
+
+                    b.Property<int>("BalanceColumn")
+                        .HasColumnType("integer")
+                        .HasColumnName("SaldoColumna");
+
+                    b.Property<int>("ConceptColumn")
+                        .HasColumnType("integer")
+                        .HasColumnName("ConceptoColumna");
+
+                    b.Property<int>("DateColumn")
+                        .HasColumnType("integer")
+                        .HasColumnName("FechaColumna");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("IsActive");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("Nombre");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("Notas");
+
+                    b.Property<int>("StartRow")
+                        .HasColumnType("integer")
+                        .HasColumnName("FilaInicio");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("Bancos", "cashflow");
+
+                    b.HasAnnotation("Finbuckle:MultiTenant", true);
+                });
+
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.BankMovement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("Importe");
+
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("numeric")
+                        .HasColumnName("Saldo");
+
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Banco");
+
+                    b.Property<string>("Concept")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Concepto");
+
+                    b.Property<DateTime?>("Date")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("Fecha");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BankName");
+
+                    b.ToTable("MovimientosBancos", "cashflow");
+
+                    b.HasAnnotation("Finbuckle:MultiTenant", true);
+                });
+
             modelBuilder.Entity("FSH.Modules.Cashflow.Domain.Client", b =>
                 {
                     b.Property<Guid>("Id")
@@ -119,6 +215,12 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                         .HasColumnType("character varying(256)")
                         .HasColumnName("Nombre");
 
+                    b.Property<bool>("ShowInProjects")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("VisibleEnProyectos");
+
                     b.Property<string>("TaxRegistration")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
@@ -196,6 +298,10 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                         .HasColumnType("text")
                         .HasColumnName("Descripcion");
 
+                    b.Property<Guid?>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("FacturaId");
+
                     b.Property<decimal?>("Percentage")
                         .HasColumnType("numeric")
                         .HasColumnName("Porcentaje");
@@ -220,11 +326,136 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
 
                     b.HasKey("Id");
 
+                    b.HasIndex("InvoiceId");
+
                     b.HasIndex("ProjectId");
 
                     b.HasIndex("StatusId");
 
                     b.ToTable("Ingresos", "cashflow");
+
+                    b.HasAnnotation("Finbuckle:MultiTenant", true);
+                });
+
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.Invoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Bank")
+                        .HasColumnType("text")
+                        .HasColumnName("Banco");
+
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ClienteId");
+
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("EmpresaId");
+
+                    b.Property<string>("DocumentPath")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("Documento");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("FechaVencimiento");
+
+                    b.Property<string>("DynamicsNumber")
+                        .HasColumnType("text")
+                        .HasColumnName("NumeroDynamics");
+
+                    b.Property<DateTime?>("InvoiceDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("FechaFactura");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("Notas");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Numero");
+
+                    b.Property<string>("PaymentTerms")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("FormaPago");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ProyectoId");
+
+                    b.Property<Guid?>("SocietyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("SociedadId");
+
+                    b.Property<Guid?>("StatusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("EstadoId");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ProveedorId");
+
+                    b.Property<decimal?>("TaxBase")
+                        .HasColumnType("numeric")
+                        .HasColumnName("BaseImponible");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("numeric")
+                        .HasColumnName("Total");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("Tipo");
+
+                    b.Property<decimal?>("Vat")
+                        .HasColumnType("numeric")
+                        .HasColumnName("Iva");
+
+                    b.Property<bool>("Verified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("Comprobada");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("SocietyId");
+
+                    b.HasIndex("StatusId");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("Number", "TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Facturas_Numero_Emitida")
+                        .HasFilter("\"Tipo\" = 'Emitida'");
+
+                    b.HasIndex("Number", "Type")
+                        .HasDatabaseName("IX_Facturas_Numero_Tipo");
+
+                    b.ToTable("Facturas", "cashflow", t =>
+                        {
+                            t.HasCheckConstraint("CK_Facturas_Tipo", "(\"Tipo\" = 'Emitida' AND \"ClienteId\" IS NOT NULL) OR (\"Tipo\" = 'Recibida' AND \"ProveedorId\" IS NOT NULL)");
+                        });
 
                     b.HasAnnotation("Finbuckle:MultiTenant", true);
                 });
@@ -291,6 +522,10 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                         .HasColumnType("text")
                         .HasColumnName("Descripcion");
 
+                    b.Property<Guid?>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("FacturaId");
+
                     b.Property<decimal?>("Percentage")
                         .HasColumnType("numeric")
                         .HasColumnName("Porcentaje");
@@ -318,6 +553,8 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                         .HasColumnName("Validado");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
 
                     b.HasIndex("ProjectId");
 
@@ -417,7 +654,7 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
 
                     b.Property<Guid?>("PrefixId")
                         .HasColumnType("uuid")
-                        .HasColumnName("PrefijoId");
+                        .HasColumnName("PrefijoCategoriaId");
 
                     b.Property<decimal?>("Profit")
                         .HasColumnType("numeric")
@@ -636,6 +873,11 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
 
             modelBuilder.Entity("FSH.Modules.Cashflow.Domain.Income", b =>
                 {
+                    b.HasOne("FSH.Modules.Cashflow.Domain.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("FSH.Modules.Cashflow.Domain.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")
@@ -652,6 +894,11 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
 
             modelBuilder.Entity("FSH.Modules.Cashflow.Domain.Payment", b =>
                 {
+                    b.HasOne("FSH.Modules.Cashflow.Domain.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("FSH.Modules.Cashflow.Domain.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")

@@ -16,7 +16,7 @@ public sealed class SearchNotesQueryHandler(CashflowDbContext dbContext)
         ArgumentNullException.ThrowIfNull(query);
 
         int page = query.PageNumber < 1 ? 1 : query.PageNumber;
-        int size = query.PageSize is < 1 or > 200 ? 20 : query.PageSize;
+        int size = query.PageSize is < 1 or > 10000 ? 20 : query.PageSize;
 
         var q = dbContext.Notes.AsNoTracking().AsQueryable();
 

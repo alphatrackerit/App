@@ -13,13 +13,13 @@ public static class ConfirmIncomeEndpoint
     internal static RouteHandlerBuilder MapConfirmIncomeEndpoint(this IEndpointRouteBuilder endpoints)
     {
         return endpoints.MapPost("/incomes/{id:guid}/confirm",
-                async (Guid id, IMediator mediator, CancellationToken ct) =>
+                async (Guid id, bool? value, IMediator mediator, CancellationToken ct) =>
                 {
-                    await mediator.Send(new ConfirmIncomeCommand(id), ct);
+                    await mediator.Send(new ConfirmIncomeCommand(id, value ?? true), ct);
                     return Results.NoContent();
                 })
             .WithName("ConfirmIncome")
-            .WithSummary("Mark an income as confirmed")
+            .WithSummary("Set the confirmed flag of an income (value=false to clear)")
             .RequirePermission(CashflowPermissions.Facturacion.ConfirmIncome);
     }
 }

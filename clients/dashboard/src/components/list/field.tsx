@@ -12,16 +12,18 @@ export function Field({
   label,
   hint,
   required,
+  className,
   children,
 }: {
   id: string;
   label: string;
   hint?: string;
   required?: boolean;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className={className ? `space-y-1.5 ${className}` : "space-y-1.5"}>
       <Label
         htmlFor={id}
         className="flex items-center gap-1.5 text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]"

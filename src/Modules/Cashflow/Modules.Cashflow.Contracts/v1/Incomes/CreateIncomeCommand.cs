@@ -9,4 +9,5 @@ public sealed record CreateIncomeCommand(
     decimal? Percentage = null,
     Guid? ProjectId = null,
     Guid? StatusId = null,
+    Guid? InvoiceId = null,
     bool Confirmed = false) : ICommand<Guid>;

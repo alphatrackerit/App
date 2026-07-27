@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Briefcase, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, Briefcase, ChevronRight, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   createProject,
@@ -36,8 +36,12 @@ import {
   EntityPageHeader,
   EntityPager,
   EntitySearch,
+  EntityColHeader,
+  EntityFilterEmptyRow,
+  useTableControls,
   Field,
 } from "@/components/list";
+import { cn } from "@/lib/cn";
 import {
   clientsApi,
   companiesApi,
@@ -51,12 +55,7 @@ import {
 import { describe } from "@/lib/list-helpers";
 
 const PAGE_SIZE = 20;
-const COLS = "grid-cols-[1fr_120px_120px_120px_48px]";
-
-function money(n: number | null | undefined): string {
-  if (n === null || n === undefined) return "—";
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(n);
-}
+const COLS = "grid-cols-[minmax(0,1fr)_150px_110px_110px_150px_48px]";
 
 function toNum(s: string): number | null {
   const t = s.trim();
@@ -77,9 +76,12 @@ type EditorState =
 
 export function ProjectsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const companyId = searchParams.get("empresa");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [editor, setEditor] = useState<EditorState>({ mode: "closed" });
 
   useEffect(() => {
@@ -90,22 +92,48 @@ export function ProjectsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  useEffect(() => {
+    setPageNumber(1);
+  }, [companyId]);
+
   const query = useQuery({
-    queryKey: ["projects", "list", { search: debouncedSearch, pageNumber, pageSize: PAGE_SIZE }],
+    queryKey: ["projects", "list", { search: debouncedSearch, pageNumber, pageSize, companyId }],
     queryFn: () =>
       searchProjects({
         search: debouncedSearch || undefined,
         pageNumber,
-        pageSize: PAGE_SIZE,
+        pageSize,
         sortBy: "name",
         sortDir: "asc",
+        companyId: companyId ?? undefined,
       }),
     placeholderData: keepPreviousData,
   });
 
+  // Catálogos para resolver nombres en las columnas (Cliente, País, Estado, Empresa).
+  const clientsQ = useCatalogOptions("clients", clientsApi, true);
+  const countriesQ = useCatalogOptions("countries", countriesApi, true);
+  const statusesQ = useCatalogOptions("statuses", statusesApi, true);
+  const companiesQ = useCatalogOptions("companies", companiesApi, true);
+  const nameOf = (items: Lookup[] | undefined, id: string | null): string =>
+    (id && items?.find((i) => i.id === id)?.name) || "—";
+  const companyName = companyId
+    ? companiesQ.data?.items.find((c) => c.id === companyId)?.name ?? null
+    : null;
+
   const data = query.data;
-  const items = data?.items ?? [];
+  const ctl = useTableControls(data?.items ?? [], {
+    name: (p) => p.name,
+    cliente: (p) => nameOf(clientsQ.data?.items, p.clientId),
+    pais: (p) => nameOf(countriesQ.data?.items, p.countryId),
+    estado: (p) => nameOf(statusesQ.data?.items, p.statusId),
+    empresa: (p) => nameOf(companiesQ.data?.items, p.companyId),
+  });
+  const items = ctl.rows;
   const searchActive = debouncedSearch.length > 0;
+  // Con filtros de columna activos la tabla sigue montada aunque no haya filas,
+  // para que la cabecera (y sus filtros) siga accesible y se puedan cambiar/limpiar.
+  const showEmpty = items.length === 0 && !ctl.hasActiveFilters;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -125,18 +153,44 @@ export function ProjectsPage() {
         </Button>
       </EntityPageHeader>
 
-      <EntitySearch value={search} onChange={setSearch} placeholder="Buscar por nombre…" />
+      {companyId && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-muted)] py-1 pl-3 pr-1.5 text-[12.5px] text-[var(--color-foreground)]">
+            Empresa: <span className="font-semibold">{companyName ?? "…"}</span>
+            <button
+              type="button"
+              aria-label="Quitar filtro de empresa"
+              onClick={() => setSearchParams({}, { replace: true })}
+              className="grid size-5 cursor-pointer place-items-center rounded-full text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-border)] hover:text-[var(--color-foreground)]"
+            >
+              <X className="size-3" />
+            </button>
+          </span>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/empresas")}
+            className="h-7 rounded-full px-3 text-[12px]"
+          >
+            <ArrowLeft className="mr-1 size-3.5" />
+            Volver a empresas
+          </Button>
+        </div>
+      )}
+
+      <EntitySearch value={search} onChange={setSearch} placeholder="Buscar por nombre, cliente, país, estado o empresa…" />
 
       {query.isLoading && items.length === 0 ? (
         <EntityListLoading desktopColumns={COLS} />
-      ) : items.length === 0 ? (
+      ) : showEmpty ? (
         <EntityEmpty
           icon={searchActive ? Search : Briefcase}
-          title={searchActive ? "Sin resultados" : "Aún no hay proyectos"}
+          title={searchActive ? "Sin resultados" : companyId ? "Esta empresa no tiene proyectos" : "Aún no hay proyectos"}
           body={
             searchActive
               ? `Nada coincide con "${debouncedSearch}". Prueba otro término o limpia la búsqueda.`
-              : "Crea tu primer proyecto para empezar a registrar ingresos, pagos y notas."
+              : companyId
+                ? "Crea un proyecto y asígnale esta empresa, o quita el filtro para ver todos."
+                : "Crea tu primer proyecto para empezar a registrar ingresos, pagos y notas."
           }
           action={
             searchActive ? (
@@ -170,8 +224,9 @@ export function ProjectsPage() {
                     <EntityInitialsAvatar name={p.name} size={40} />
                     <div className="min-w-0">
                       <p className="truncate text-[14px] font-medium text-[var(--color-foreground)]">{p.name}</p>
-                      <p className="mt-0.5 text-[11.5px] text-[var(--color-muted-foreground)] tabular-nums">
-                        Venta {money(p.salePrice)} · Beneficio {money(p.profit)}
+                      <p className="mt-0.5 truncate text-[11.5px] text-[var(--color-muted-foreground)]">
+                        {nameOf(clientsQ.data?.items, p.clientId)} · {nameOf(statusesQ.data?.items, p.statusId)} ·{" "}
+                        {nameOf(companiesQ.data?.items, p.companyId)}
                       </p>
                     </div>
                   </div>
@@ -183,14 +238,30 @@ export function ProjectsPage() {
 
           {/* Desktop */}
           <EntityListCard className="hidden md:block">
-            <EntityListHeader className={COLS}>
-              <span>Proyecto</span>
-              <span className="text-right">Venta</span>
-              <span className="text-right">Coste</span>
-              <span className="text-right">Beneficio</span>
+            <EntityListHeader className={cn(COLS, "!overflow-visible")}>
+              {(
+                [
+                  ["name", "Nombre"],
+                  ["cliente", "Cliente"],
+                  ["pais", "País"],
+                  ["estado", "Estado"],
+                  ["empresa", "Empresa"],
+                ] as const
+              ).map(([key, label]) => (
+                <EntityColHeader
+                  key={key}
+                  colKey={key}
+                  label={label}
+                  sort={ctl.sort}
+                  filters={ctl.filters}
+                  onSort={ctl.toggleSort}
+                  onFilter={ctl.setFilter}
+                />
+              ))}
               <span />
             </EntityListHeader>
 
+            {items.length === 0 && <EntityFilterEmptyRow onClear={ctl.clearFilters} />}
             {items.map((p, i) => (
               <EntityListRow key={p.id} className={COLS} isLast={i === items.length - 1} onClick={() => navigate(`/projects/${p.id}`)}>
                 <div className="flex min-w-0 items-center gap-3">
@@ -199,9 +270,10 @@ export function ProjectsPage() {
                     {p.name}
                   </div>
                 </div>
-                <div className="text-right text-[13px] text-[var(--color-foreground)] tabular-nums">{money(p.salePrice)}</div>
-                <div className="text-right text-[13px] text-[var(--color-muted-foreground)] tabular-nums">{money(p.cost)}</div>
-                <div className="text-right text-[13px] font-medium text-[var(--color-foreground)] tabular-nums">{money(p.profit)}</div>
+                <div className="truncate text-[13px] text-[var(--color-muted-foreground)]">{nameOf(clientsQ.data?.items, p.clientId)}</div>
+                <div className="truncate text-[13px] text-[var(--color-muted-foreground)]">{nameOf(countriesQ.data?.items, p.countryId)}</div>
+                <div className="truncate text-[13px] text-[var(--color-muted-foreground)]">{nameOf(statusesQ.data?.items, p.statusId)}</div>
+                <div className="truncate text-[13px] text-[var(--color-muted-foreground)]">{nameOf(companiesQ.data?.items, p.companyId)}</div>
                 <div className="flex items-center justify-end gap-1">
                   <button
                     type="button"
@@ -237,6 +309,11 @@ export function ProjectsPage() {
             hasNext={!!data?.hasNext}
             onPrev={() => setPageNumber((p) => Math.max(1, p - 1))}
             onNext={() => setPageNumber((p) => p + 1)}
+            pageSize={pageSize}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setPageNumber(1);
+            }}
           />
         </div>
       )}
@@ -259,12 +336,12 @@ export function ProjectsPage() {
 function useCatalogOptions(key: string, api: CatalogApi, enabled: boolean) {
   return useQuery({
     queryKey: ["administration", key, "options"],
-    queryFn: () => api.search({ pageSize: 200, sortBy: "name", sortDir: "asc" }),
+    queryFn: () => api.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }),
     enabled,
   });
 }
 
-function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: () => void }) {
+export function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: () => void }) {
   const isOpen = state.mode === "create" || state.mode === "edit";
   const project = state.mode === "edit" ? state.project : undefined;
   const queryClient = useQueryClient();
@@ -272,15 +349,20 @@ function ProjectEditorDialog({ state, onClose }: { state: EditorState; onClose: 
   const clientsQ = useCatalogOptions("clients", clientsApi, isOpen);
   const countriesQ = useCatalogOptions("countries", countriesApi, isOpen);
   const companiesQ = useCatalogOptions("companies", companiesApi, isOpen);
-  const statusesQ = useCatalogOptions("statuses", statusesApi, isOpen);
+  // Solo estados del tipo Proyecto (el catálogo es polimórfico: Proyecto/Ingreso/Pago).
+  const statusesQ = useQuery({
+    queryKey: ["administration", "statuses", "options", "Proyecto"],
+    queryFn: () => statusesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc", type: "Proyecto" }),
+    enabled: isOpen,
+  });
   const societiesQ = useQuery({
     queryKey: ["administration", "societies", "options"],
-    queryFn: () => societiesApi.search({ pageSize: 200, sortBy: "name", sortDir: "asc" }),
+    queryFn: () => societiesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }),
     enabled: isOpen,
   });
   const categoriesQ = useQuery({
     queryKey: ["administration", "prefixes", "categories"],
-    queryFn: () => prefixesApi.search({ pageSize: 200, sortBy: "name", sortDir: "asc", type: "Categoria", onlyActive: true }),
+    queryFn: () => prefixesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc", type: "Categoria", onlyActive: true }),
     enabled: isOpen,
   });
 

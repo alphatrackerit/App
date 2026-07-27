@@ -101,7 +101,7 @@ public sealed class SearchSuppliersQueryHandler(CashflowDbContext db) : IQueryHa
     {
         ArgumentNullException.ThrowIfNull(query);
         int page = query.PageNumber < 1 ? 1 : query.PageNumber;
-        int size = query.PageSize is < 1 or > 200 ? 20 : query.PageSize;
+        int size = query.PageSize is < 1 or > 10000 ? 20 : query.PageSize;
 
         var q = db.Suppliers.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -139,6 +139,6 @@ public sealed class SearchSuppliersQueryValidator : AbstractValidator<SearchSupp
     public SearchSuppliersQueryValidator()
     {
         RuleFor(x => x.PageNumber).GreaterThanOrEqualTo(1);
-        RuleFor(x => x.PageSize).InclusiveBetween(1, 200);
+        RuleFor(x => x.PageSize).InclusiveBetween(1, 10000);
     }
 }

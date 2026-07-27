@@ -111,14 +111,23 @@ const ProjectDetailPage = lazyNamed(
   "ProjectDetailPage",
 );
 const ProveedoresPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "ProveedoresPage");
-const ClientesPage = lazyNamed(() => import("@/pages/admin/placeholders"), "ClientesPage");
-const PaisesPage = lazyNamed(() => import("@/pages/admin/placeholders"), "PaisesPage");
+const ClientesPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "ClientesPage");
+const PaisesPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "PaisesPage");
 const EstadosPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "EstadosPage");
-const EmpresasPage = lazyNamed(() => import("@/pages/admin/placeholders"), "EmpresasPage");
+const EmpresasPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "EmpresasPage");
+const EmpresasAdminPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "EmpresasAdminPage");
 const SociedadesPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "SociedadesPage");
 const PrefijosPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "PrefijosPage");
+const BancosPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "BancosPage");
+const MovimientosBancosPage = lazyNamed(() => import("@/pages/admin/rich-catalog"), "MovimientosBancosPage");
+const FacturasPage = lazyNamed(() => import("@/pages/admin/facturas"), "FacturasPage");
+const PanelFacturacionPage = lazyNamed(() => import("@/pages/facturacion/panel"), "PanelFacturacionPage");
+const VencimientosPage = lazyNamed(() => import("@/pages/facturacion/vencimientos"), "VencimientosPage");
+const PagosCobrosPage = lazyNamed(() => import("@/pages/facturacion/pagos-cobros"), "PagosCobrosPage");
+const RemesasPage = lazyNamed(() => import("@/pages/facturacion/remesas"), "RemesasPage");
 const FlujoDeCajaPage = lazyNamed(() => import("@/pages/projects/cashflow"), "FlujoDeCajaPage");
 const GraficosPage = lazyNamed(() => import("@/pages/projects/graficos"), "GraficosPage");
+const LogPage = lazyNamed(() => import("@/pages/projects/log"), "LogPage");
 const AvicolaPanelPage = lazyNamed(() => import("@/pages/avicola/avicola"), "AvicolaPanelPage");
 const LotesPage = lazyNamed(() => import("@/pages/avicola/lotes"), "LotesPage");
 const LoteDetailPage = lazyNamed(() => import("@/pages/avicola/lote-detail"), "LoteDetailPage");
@@ -234,6 +243,7 @@ export const router = createBrowserRouter([
           { path: "empresas", element: withSuspense(<EmpresasPage />) },
           { path: "flujo-de-caja", element: withSuspense(<FlujoDeCajaPage />) },
           { path: "graficos", element: withSuspense(<GraficosPage />) },
+          { path: "log", element: withSuspense(<LogPage />) },
           { path: "avicola", element: withSuspense(<AvicolaPanelPage />) },
           { path: "avicola/lotes", element: withSuspense(<LotesPage />) },
           { path: "avicola/lotes/:loteId", element: withSuspense(<LoteDetailPage />) },
@@ -245,8 +255,17 @@ export const router = createBrowserRouter([
           { path: "admin/clientes", element: withSuspense(<ClientesPage />) },
           { path: "admin/paises", element: withSuspense(<PaisesPage />) },
           { path: "admin/estados", element: withSuspense(<EstadosPage />) },
+          { path: "admin/empresas", element: withSuspense(<EmpresasAdminPage />) },
           { path: "admin/sociedades", element: withSuspense(<SociedadesPage />) },
           { path: "admin/prefijos", element: withSuspense(<PrefijosPage />) },
+          { path: "admin/bancos", element: withSuspense(<BancosPage />) },
+          { path: "admin/movimientos-banco", element: withSuspense(<MovimientosBancosPage />) },
+          { path: "admin/facturas", element: <Navigate to="/facturacion/facturas" replace /> },
+          { path: "facturacion", element: withSuspense(<PanelFacturacionPage />) },
+          { path: "facturacion/facturas", element: withSuspense(<FacturasPage />) },
+          { path: "facturacion/vencimientos", element: withSuspense(<VencimientosPage />) },
+          { path: "facturacion/pagos-cobros", element: withSuspense(<PagosCobrosPage />) },
+          { path: "facturacion/remesas", element: withSuspense(<RemesasPage />) },
           {
             path: "settings",
             element: withSuspense(<SettingsLayout />),

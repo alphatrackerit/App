@@ -14,6 +14,7 @@ export type SearchLookupParams = {
   type?: string;        // statuses / prefixes
   onlyActive?: boolean; // prefixes
   clientId?: string;    // societies
+  showInProjects?: boolean; // companies
 };
 
 function query(params: SearchLookupParams): string {
@@ -74,10 +75,90 @@ function richCatalog<TRow, TInput>(base: string): RichCatalogApi<TRow, TInput> {
   };
 }
 
+// Shared CRM fields for Client & Supplier (spec §2 maestros). `registeredOn` is
+// an ISO date-time string on the wire (backend DateTimeOffset?).
+export type PartyFields = {
+  taxId: string | null;
+  address: string | null;
+  contact: string | null;
+  legalName: string | null;
+  phone: string | null;
+  email: string | null;
+  registeredOn: string | null;
+  colorHex: string | null;
+};
+export type PartyInputFields = {
+  taxId?: string | null;
+  address?: string | null;
+  contact?: string | null;
+  legalName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  registeredOn?: string | null;
+  colorHex?: string | null;
+};
+
 // Supplier — the color/priority drive the cash-flow calendar.
-export type SupplierRow = Lookup & { colorHex: string | null; visualPriority: number };
-export type SupplierInput = LookupInput & { colorHex?: string | null; visualPriority?: number };
+export type SupplierRow = Lookup & PartyFields & { supplierType: string | null; visualPriority: number };
+export type SupplierInput = LookupInput & PartyInputFields & { supplierType?: string | null; visualPriority?: number };
 export const supplierCatalog = richCatalog<SupplierRow, SupplierInput>("/suppliers");
+
+// Client — same CRM shape as Supplier, minus priority.
+export type ClientRow = Lookup & PartyFields & { clientType: string | null };
+export type ClientInput = LookupInput & PartyInputFields & { clientType?: string | null };
+export const clientCatalog = richCatalog<ClientRow, ClientInput>("/clients");
+
+// Company — legal entity (billing party).
+export type CompanyRow = Lookup & { legalName: string | null; taxRegistration: string | null; showInProjects: boolean };
+export type CompanyInput = LookupInput & { legalName?: string | null; taxRegistration?: string | null; showInProjects?: boolean };
+export const companyCatalog = richCatalog<CompanyRow, CompanyInput>("/companies");
+
+// Country — name + ISO code + description.
+export type CountryRow = Lookup & { description: string | null };
+export type CountryInput = LookupInput & { description?: string | null };
+export const countryCatalog = richCatalog<CountryRow, CountryInput>("/countries");
+
+// Bank — statement-import column mapping (spec §33, optional).
+export type BankRow = {
+  id: string;
+  name: string;
+  startRow: number;
+  dateColumn: number;
+  conceptColumn: number;
+  amountColumn: number;
+  balanceColumn: number;
+  isActive: boolean;
+  notes: string | null;
+};
+export type BankInput = {
+  name: string;
+  startRow?: number;
+  dateColumn?: number;
+  conceptColumn?: number;
+  amountColumn?: number;
+  balanceColumn?: number;
+  isActive?: boolean;
+  notes?: string | null;
+};
+export const bankCatalog = richCatalog<BankRow, BankInput>("/banks");
+
+// BankMovement — an imported statement line (imported via a Bank's column mapping).
+export type BankMovementRow = {
+  id: string;
+  date: string | null;
+  concept: string;
+  amount: number;
+  balance: number;
+  bankName: string;
+};
+export type BankMovementInput = {
+  bankName: string;
+  concept: string;
+  amount: number;
+  balance: number;
+  date?: string | null;
+};
+export const bankMovementsApi = richCatalog<BankMovementRow, BankMovementInput>("/bank-movements");
 
 // Status — polymorphic by Type (PROYECTO | INGRESO | PAGO) + color.
 export type StatusType = "Proyecto" | "Ingreso" | "Pago";

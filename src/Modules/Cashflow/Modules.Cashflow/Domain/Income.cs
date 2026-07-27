@@ -17,6 +17,10 @@ public sealed class Income : AggregateRoot<Guid>
     /// <summary>Soft reference to the external Estados catalog (indexed, no FK).</summary>
     public Guid? StatusId { get; private set; }
 
+    /// <summary>Owning fiscal invoice (same module → real FK, ON DELETE SET NULL). Nullable: a
+    /// forecast collection exists before its invoice is issued. Only ever an <c>Emitida</c> invoice.</summary>
+    public Guid? InvoiceId { get; private set; }
+
     public bool Confirmed { get; private set; }
     public bool Validated { get; private set; }
 
@@ -70,6 +74,10 @@ public sealed class Income : AggregateRoot<Guid>
     public void SetConfirmed(bool value) => Confirmed = value;
 
     public void SetValidated(bool value) => Validated = value;
+
+    /// <summary>Links this collection to (or, with <c>null</c>, unlinks it from) a fiscal invoice.
+    /// Kept off <see cref="Update"/> so a routine edit never silently re-links.</summary>
+    public void LinkInvoice(Guid? invoiceId) => InvoiceId = invoiceId;
 
     // Midnight + Unspecified kind: no timezone offset, so serialization never bumps the day.
     private static DateTime? NormalizeDate(DateTime? date) =>

@@ -1,8 +1,10 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, ChevronLeft, ChevronRight, ListFilter } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, Eye, ListFilter, Search, X } from "lucide-react";
 import { getDailySummary, type DailySummaryProject } from "@/api/projects";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogBody,
@@ -41,14 +43,20 @@ function ymd(iso: string): { y: number; m: number; d: number } {
   const dt = new Date(iso);
   return { y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate() };
 }
-// Faint tint from a raw supplier hex; the alpha keeps it legible in light & dark.
-function hexTint(hex: string, alpha: number): string | undefined {
-  return /^#[0-9a-fA-F]{6}$/.test(hex) ? `oklch(from ${hex} l c h / ${alpha})` : undefined;
+// Faint tint from a raw supplier color; the alpha keeps it legible in light & dark.
+// Accepts #rrggbb and CSS color functions (rgb/rgba/hsl/hsla/oklch/oklab) — legacy data stores
+// colors as rgba(). `#ffffff00` (the TRANSPARENT sentinel, 8 hex) intentionally doesn't match.
+function hexTint(color: string, alpha: number): string | undefined {
+  return /^#[0-9a-fA-F]{6}$/.test(color) || /^(rgba?|hsla?|oklch|oklab|color)\(/i.test(color)
+    ? `oklch(from ${color} l c h / ${alpha})`
+    : undefined;
 }
 
 type CellDetail = {
   id: string;
   amount: number;
+  percentage: number | null;
+  projectId: string;
   projectName: string;
   supplierName: string | null;
   description: string | null;
@@ -57,10 +65,13 @@ type CellDetail = {
   status: string;
 };
 type DayCell = { inc: number; pay: number; color: string; priority: number; incList: CellDetail[]; payList: CellDetail[] };
-type DetailState = { title: string; kind: "inc" | "pay"; entries: CellDetail[] } | null;
+type DetailState = { title: string; date: string; kind: "inc" | "pay"; entries: CellDetail[] } | null;
 
 export function FlujoDeCajaPage() {
   const now = new Date();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // "Ver reporte" desde el detalle de proyecto llega con ?proyecto=<id> → informe de ese proyecto solamente.
+  const soloProjectId = searchParams.get("proyecto");
   const [year, setYear] = useState<number>(now.getFullYear());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
@@ -70,11 +81,12 @@ export function FlujoDeCajaPage() {
   // The server computes totals + predominant-supplier color; status filter is a server param
   // so both stay accurate, while the project include/exclude is applied client-side.
   const q = useQuery({
-    queryKey: ["cashflow", "summary", statusFilter],
+    queryKey: ["cashflow", "summary", statusFilter, soloProjectId],
     queryFn: () =>
       getDailySummary({
         onlyConfirmed: statusFilter === "confirmed",
         onlyValidated: statusFilter === "validated",
+        projectIds: soloProjectId ? [soloProjectId] : undefined,
       }),
   });
   const projects: DailySummaryProject[] = q.data ?? [];
@@ -105,14 +117,14 @@ export function FlujoDeCajaPage() {
         }
         for (const it of day.incomeDetails) {
           cell.incList.push({
-            id: it.id, amount: it.amount, projectName: proj.projectName, supplierName: null,
-            description: it.description, confirmed: it.confirmed, validated: it.validated, status: it.status,
+            id: it.id, amount: it.amount, percentage: it.percentage, projectId: proj.projectId, projectName: proj.projectName,
+            supplierName: null, description: it.description, confirmed: it.confirmed, validated: it.validated, status: it.status,
           });
         }
         for (const it of day.paymentDetails) {
           cell.payList.push({
-            id: it.id, amount: it.amount, projectName: proj.projectName, supplierName: it.supplierName,
-            description: it.description, confirmed: it.confirmed, validated: it.validated, status: it.status,
+            id: it.id, amount: it.amount, percentage: it.percentage, projectId: proj.projectId, projectName: proj.projectName,
+            supplierName: it.supplierName, description: it.description, confirmed: it.confirmed, validated: it.validated, status: it.status,
           });
         }
         const ym = y * 100 + m;
@@ -168,6 +180,24 @@ export function FlujoDeCajaPage() {
   const totalProjects = projectList.length;
   const selectedCount = totalProjects - excluded.size;
   const today = { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() };
+
+  // Centrar la vista en el día actual: al cargar y cada vez que se pulsa "Hoy".
+  const scrollBoxRef = useRef<HTMLDivElement>(null);
+  const todayCellRef = useRef<HTMLTableCellElement>(null);
+  const [goToTodayNonce, setGoToTodayNonce] = useState(0);
+  const hasData = !!q.data;
+  useEffect(() => {
+    if (!hasData || year !== today.y) return;
+    const box = scrollBoxRef.current;
+    const cell = todayCellRef.current;
+    if (!box || !cell) return;
+    box.scrollTo({
+      left: Math.max(0, cell.offsetLeft - box.clientWidth / 2),
+      top: Math.max(0, cell.offsetTop - box.clientHeight / 2),
+      behavior: goToTodayNonce > 0 ? "smooth" : "auto",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasData, year, goToTodayNonce]);
 
   const headTh =
     "sticky bg-[var(--color-card)] z-20 border border-[var(--color-border)] px-2 py-1.5 text-center text-[11px] font-semibold text-[var(--color-muted-foreground)]";
@@ -232,7 +262,10 @@ export function FlujoDeCajaPage() {
 
         <Button
           variant="outline"
-          onClick={() => setYear(now.getFullYear())}
+          onClick={() => {
+            setYear(now.getFullYear());
+            setGoToTodayNonce((n) => n + 1);
+          }}
           className="h-9 gap-1.5 rounded-lg px-3 text-[13px]"
         >
           <CalendarClock className="size-4" />
@@ -257,10 +290,24 @@ export function FlujoDeCajaPage() {
           ))}
         </div>
 
-        <Button variant="outline" onClick={() => setProjectsOpen(true)} className="h-9 gap-1.5 rounded-lg px-3 text-[13px]">
-          <ListFilter className="size-4" />
-          {selectedCount === totalProjects ? "Todos los proyectos" : `${selectedCount} de ${totalProjects} proyectos`}
-        </Button>
+        {soloProjectId ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-muted)] py-1 pl-3 pr-1.5 text-[12.5px] text-[var(--color-foreground)]">
+            Proyecto: <span className="font-semibold">{projectList[0]?.name ?? "…"}</span>
+            <button
+              type="button"
+              aria-label="Ver todos los proyectos"
+              onClick={() => setSearchParams({}, { replace: true })}
+              className="grid size-5 cursor-pointer place-items-center rounded-full text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-border)] hover:text-[var(--color-foreground)]"
+            >
+              <X className="size-3" />
+            </button>
+          </span>
+        ) : (
+          <Button variant="outline" onClick={() => setProjectsOpen(true)} className="h-9 gap-1.5 rounded-lg px-3 text-[13px]">
+            <ListFilter className="size-4" />
+            {selectedCount === totalProjects ? "Todos los proyectos" : `${selectedCount} de ${totalProjects} proyectos`}
+          </Button>
+        )}
       </div>
 
       {q.isError ? (
@@ -280,6 +327,7 @@ export function FlujoDeCajaPage() {
         </div>
       ) : (
         <div
+          ref={scrollBoxRef}
           className="overflow-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xs"
           style={{ maxHeight: "70vh" }}
         >
@@ -329,11 +377,12 @@ export function FlujoDeCajaPage() {
                     return (
                       <Fragment key={m}>
                         <td
+                          ref={isToday ? todayCellRef : undefined}
                           style={{ border, width: 108, background: supplierTint ?? weekendBg }}
                           title={cell && cell.payList.length && cell.color !== TRANSPARENT ? "Color del proveedor predominante" : undefined}
                           onClick={
                             cell && cell.payList.length
-                              ? () => setDetail({ title: `Pagos · ${d} ${MONTHS[m - 1]} ${year}`, kind: "pay", entries: cell.payList })
+                              ? () => setDetail({ title: "Pagos", date: `${d} de ${MONTHS[m - 1].toLowerCase()} de ${year}`, kind: "pay", entries: cell.payList })
                               : undefined
                           }
                           className={
@@ -347,7 +396,7 @@ export function FlujoDeCajaPage() {
                           style={{ border, width: 108, background: weekendBg }}
                           onClick={
                             cell && cell.incList.length
-                              ? () => setDetail({ title: `Ingresos · ${d} ${MONTHS[m - 1]} ${year}`, kind: "inc", entries: cell.incList })
+                              ? () => setDetail({ title: "Ingresos", date: `${d} de ${MONTHS[m - 1].toLowerCase()} de ${year}`, kind: "inc", entries: cell.incList })
                               : undefined
                           }
                           className={
@@ -467,40 +516,137 @@ function ProjectsDialog({
   );
 }
 
+// Tabla de movimientos de un proyecto — Importe / % / Estado / (Proveedor) / Descripción, con el
+// ojo de la última columna como acceso al detalle del proyecto.
+function DetailTable({ entries, kind, onClose }: { entries: CellDetail[]; kind: "inc" | "pay"; onClose: () => void }) {
+  const showSupplier = kind === "pay";
+  const th = "px-2.5 py-1.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]";
+  const td = "px-2.5 py-1.5 text-[12.5px]";
+  return (
+    <div className="mt-3 overflow-x-auto rounded-lg border border-[var(--color-border)]">
+      <table className="w-full min-w-[560px]">
+        <thead>
+          <tr className="border-b border-[var(--color-border)]">
+            <th className={`${th} text-right`}>Importe</th>
+            <th className={`${th} text-right`}>%</th>
+            <th className={th}>Estado</th>
+            {showSupplier && <th className={th}>Proveedor</th>}
+            <th className={th}>Descripción</th>
+            <th className={th}>
+              <span className="sr-only">Proyecto</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[var(--color-border)]">
+          {entries.map((e) => (
+            <tr key={e.id}>
+              <td className={`${td} text-right font-medium tabular-nums text-[var(--color-foreground)]`}>
+                {money(e.amount)} €
+              </td>
+              <td className={`${td} text-right tabular-nums text-[var(--color-muted-foreground)]`}>
+                {e.percentage != null ? money(e.percentage) : "—"}
+              </td>
+              <td className={td}>
+                <EntityStatusBadge tone={e.validated ? "info" : e.confirmed ? "success" : "default"} withDot>
+                  {e.validated ? "Validado" : e.confirmed ? "Confirmado" : "Pendiente"}
+                </EntityStatusBadge>
+              </td>
+              {showSupplier && (
+                <td
+                  className={`${td} max-w-[160px] truncate text-[var(--color-muted-foreground)]`}
+                  title={e.supplierName ?? undefined}
+                >
+                  {e.supplierName ?? "—"}
+                </td>
+              )}
+              <td
+                className={`${td} max-w-[240px] truncate text-[var(--color-muted-foreground)]`}
+                title={e.description ?? undefined}
+              >
+                {e.description || "—"}
+              </td>
+              <td className={`${td} text-right`}>
+                <Link
+                  to={`/projects/${e.projectId}`}
+                  onClick={onClose}
+                  aria-label={`Ver detalles del proyecto ${e.projectName}`}
+                  title="Ver detalles del proyecto"
+                  className="inline-grid size-7 place-items-center rounded-md text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-primary)]"
+                >
+                  <Eye className="size-4" />
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function DayDetailDialog({ detail, onClose }: { detail: DetailState; onClose: () => void }) {
   const total = detail?.entries.reduce((s, e) => s + e.amount, 0) ?? 0;
+  const [query, setQuery] = useState("");
+
+  // Limpiar el buscador cada vez que se abre un día distinto.
+  useEffect(() => setQuery(""), [detail]);
+
+  const q = query.trim().toLowerCase();
+  const filtered = (detail?.entries ?? []).filter(
+    (e) =>
+      q === "" ||
+      e.projectName.toLowerCase().includes(q) ||
+      (e.supplierName ?? "").toLowerCase().includes(q) ||
+      (e.description ?? "").toLowerCase().includes(q) ||
+      money(e.amount).includes(q),
+  );
+
+  // Agrupar por proyecto, como en la app original.
+  const groups: { projectId: string; projectName: string; entries: CellDetail[] }[] = [];
+  for (const e of filtered) {
+    const g = groups.find((x) => x.projectId === e.projectId);
+    if (g) g.entries.push(e);
+    else groups.push({ projectId: e.projectId, projectName: e.projectName, entries: [e] });
+  }
+
   return (
     <Dialog open={detail != null} onOpenChange={(o) => (!o ? onClose() : undefined)}>
-      <DialogContent className="!max-w-lg">
+      <DialogContent className="!max-w-3xl">
         <DialogHeader>
           <DialogTitle>{detail?.title}</DialogTitle>
           <DialogDescription>
+            Día consultado: <strong className="text-[var(--color-foreground)]">{detail?.date}</strong> ·{" "}
             {detail?.entries.length} movimiento(s) · total{" "}
             <strong className={detail?.kind === "inc" ? "text-[var(--color-success)]" : "text-[var(--color-destructive)]"}>
-              {money(total)}
+              {money(total)} €
             </strong>
           </DialogDescription>
         </DialogHeader>
-        <DialogBody>
-          <ul className="divide-y divide-[oklch(from_var(--color-border)_l_c_h_/_0.5)]">
-            {detail?.entries.map((e) => (
-              <li key={e.id} className="flex items-center gap-3 py-2">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[14px] font-medium tabular-nums text-[var(--color-foreground)]">{money(e.amount)}</span>
-                    {e.status && <EntityStatusBadge>{e.status}</EntityStatusBadge>}
-                    {e.confirmed && <EntityStatusBadge tone="success" withDot>Confirmado</EntityStatusBadge>}
-                    {e.validated && <EntityStatusBadge tone="info" withDot>Validado</EntityStatusBadge>}
-                  </div>
-                  <p className="mt-0.5 truncate text-[12px] text-[var(--color-muted-foreground)]">
-                    {e.projectName}
-                    {e.supplierName ? ` · ${e.supplierName}` : ""}
-                    {e.description ? ` · ${e.description}` : ""}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
+        <div className="px-6 pb-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[var(--color-muted-foreground)]" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar por proyecto, proveedor, descripción o importe…"
+              className="pl-8"
+            />
+          </div>
+        </div>
+        <DialogBody className="max-h-[60vh] space-y-5 overflow-y-auto">
+          {groups.map((g) => (
+            <section key={g.projectId}>
+              <h3 className="border-b-2 border-[var(--color-primary)] pb-1.5 text-[15px] text-[var(--color-foreground)]">
+                <span className="font-bold">Proyecto:</span> {g.projectName}
+              </h3>
+              <DetailTable entries={g.entries} kind={detail?.kind ?? "inc"} onClose={onClose} />
+            </section>
+          ))}
+          {groups.length === 0 && (
+            <p className="py-8 text-center text-[13px] text-[var(--color-muted-foreground)]">
+              Ningún movimiento coincide con «{query}».
+            </p>
+          )}
         </DialogBody>
         <DialogFooter>
           <DialogClose asChild>

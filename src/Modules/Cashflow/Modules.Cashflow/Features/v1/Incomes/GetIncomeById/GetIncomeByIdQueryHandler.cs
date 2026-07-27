@@ -21,6 +21,6 @@ public sealed class GetIncomeByIdQueryHandler(CashflowDbContext dbContext)
             ?? throw new NotFoundException($"Income {query.IncomeId} not found.");
 
         return new IncomeDto(
-            i.Id, i.Amount, i.Description, i.Date, i.Percentage, i.ProjectId, i.StatusId, i.Confirmed, i.Validated);
+            i.Id, i.Amount, i.Description, i.Date, i.Percentage, i.ProjectId, i.StatusId, i.Confirmed, i.Validated, i.InvoiceId);
     }
 }

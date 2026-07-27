@@ -9,6 +9,7 @@
     <!-- Pack default lives in Directory.Build.props (false; source-ownership model). -->
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="Anthropic" Version="12.35.1" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup Label="Aspire">

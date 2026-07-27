@@ -9,4 +9,5 @@ public sealed record IncomeDto(
     Guid? ProjectId,
     Guid? StatusId,
     bool Confirmed,
-    bool Validated);
+    bool Validated,
+    Guid? InvoiceId);

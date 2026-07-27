@@ -10,4 +10,5 @@ public sealed record CreatePaymentCommand(
     Guid? SupplierId = null,
     Guid? ProjectId = null,
     Guid? StatusId = null,
+    Guid? InvoiceId = null,
     bool Confirmed = false) : ICommand<Guid>;

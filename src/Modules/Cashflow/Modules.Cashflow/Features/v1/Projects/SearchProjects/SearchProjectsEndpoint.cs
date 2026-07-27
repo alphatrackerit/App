@@ -13,7 +13,7 @@ public static class SearchProjectsEndpoint
     internal static RouteHandlerBuilder MapSearchProjectsEndpoint(this IEndpointRouteBuilder endpoints)
     {
         return endpoints.MapGet("/projects",
-                (string? search, int? pageNumber, int? pageSize, string? sortBy, string? sortDir,
+                (string? search, int? pageNumber, int? pageSize, string? sortBy, string? sortDir, Guid? companyId,
                  IMediator mediator, CancellationToken ct) =>
                     mediator.Send(
                         new SearchProjectsQuery(
@@ -21,10 +21,11 @@ public static class SearchProjectsEndpoint
                             pageNumber ?? 1,
                             pageSize ?? 20,
                             sortBy,
-                            sortDir),
+                            sortDir,
+                            companyId),
                         ct))
             .WithName("SearchProjects")
-            .WithSummary("Search projects (paged, sortable)")
+            .WithSummary("Search projects (paged, sortable, filter by company)")
             .RequirePermission(CashflowPermissions.Projects.View);
     }
 }

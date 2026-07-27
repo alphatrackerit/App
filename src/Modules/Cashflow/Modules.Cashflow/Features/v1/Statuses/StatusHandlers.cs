@@ -81,7 +81,7 @@ public sealed class SearchStatusesQueryHandler(CashflowDbContext db) : IQueryHan
     {
         ArgumentNullException.ThrowIfNull(query);
         int page = query.PageNumber < 1 ? 1 : query.PageNumber;
-        int size = query.PageSize is < 1 or > 200 ? 20 : query.PageSize;
+        int size = query.PageSize is < 1 or > 10000 ? 20 : query.PageSize;
 
         var q = db.Statuses.AsNoTracking().AsQueryable();
         if (query.Type is not null)
@@ -121,6 +121,6 @@ public sealed class SearchStatusesQueryValidator : AbstractValidator<SearchStatu
     public SearchStatusesQueryValidator()
     {
         RuleFor(x => x.PageNumber).GreaterThanOrEqualTo(1);
-        RuleFor(x => x.PageSize).InclusiveBetween(1, 200);
+        RuleFor(x => x.PageSize).InclusiveBetween(1, 10000);
     }
 }

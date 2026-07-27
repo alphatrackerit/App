@@ -31,10 +31,14 @@ public static class CashflowPermissions
         public const string Delete   = $"Permissions.{Resource}.Delete";
     }
 
-    // Billing (facturación) — confirm/validate live under their own resource (spec §8).
+    // Billing (facturación) — invoice CRUD plus the confirm/validate line actions (spec §8).
     public static class Facturacion
     {
         public const string Resource = "Facturacion";
+        public const string View   = $"Permissions.{Resource}.View";
+        public const string Create = $"Permissions.{Resource}.Create";
+        public const string Update = $"Permissions.{Resource}.Update";
+        public const string Delete = $"Permissions.{Resource}.Delete";
         public const string ConfirmIncome  = $"Permissions.{Resource}.ConfirmIncome";
         public const string ValidateIncome = $"Permissions.{Resource}.ValidateIncome";
         public const string ConfirmPago    = $"Permissions.{Resource}.ConfirmPago";
@@ -122,6 +126,25 @@ public static class CashflowPermissions
         public const string Delete = $"Permissions.{Resource}.Delete";
     }
 
+    // Bank statement import (spec §33, optional).
+    public static class Banks
+    {
+        public const string Resource = "Administration.Banks";
+        public const string View   = $"Permissions.{Resource}.View";
+        public const string Create = $"Permissions.{Resource}.Create";
+        public const string Update = $"Permissions.{Resource}.Update";
+        public const string Delete = $"Permissions.{Resource}.Delete";
+    }
+
+    public static class BankMovements
+    {
+        public const string Resource = "Administration.BankMovements";
+        public const string View   = $"Permissions.{Resource}.View";
+        public const string Create = $"Permissions.{Resource}.Create";
+        public const string Update = $"Permissions.{Resource}.Update";
+        public const string Delete = $"Permissions.{Resource}.Delete";
+    }
+
     public static IReadOnlyList<FshPermission> All { get; } =
     [
         new("View Projects",   ActionConstants.View,   Projects.Resource, IsBasic: true),
@@ -138,6 +161,11 @@ public static class CashflowPermissions
         new("Create Payments",   ActionConstants.Create, Payments.Resource),
         new("Update Payments",   ActionConstants.Update, Payments.Resource),
         new("Delete Payments",   ActionConstants.Delete, Payments.Resource),
+
+        new("View Invoices",   ActionConstants.View,   Facturacion.Resource, IsBasic: true),
+        new("Create Invoices", ActionConstants.Create, Facturacion.Resource),
+        new("Update Invoices", ActionConstants.Update, Facturacion.Resource),
+        new("Delete Invoices", ActionConstants.Delete, Facturacion.Resource),
 
         new("Confirm income (billing)",   "ConfirmIncome",  Facturacion.Resource),
         new("Validate income (billing)",  "ValidateIncome", Facturacion.Resource),
@@ -185,5 +213,15 @@ public static class CashflowPermissions
         new("Create Prefixes", ActionConstants.Create, Prefixes.Resource),
         new("Update Prefixes", ActionConstants.Update, Prefixes.Resource),
         new("Delete Prefixes", ActionConstants.Delete, Prefixes.Resource),
+
+        new("View Banks",   ActionConstants.View,   Banks.Resource, IsBasic: true),
+        new("Create Banks", ActionConstants.Create, Banks.Resource),
+        new("Update Banks", ActionConstants.Update, Banks.Resource),
+        new("Delete Banks", ActionConstants.Delete, Banks.Resource),
+
+        new("View BankMovements",   ActionConstants.View,   BankMovements.Resource, IsBasic: true),
+        new("Create BankMovements", ActionConstants.Create, BankMovements.Resource),
+        new("Update BankMovements", ActionConstants.Update, BankMovements.Resource),
+        new("Delete BankMovements", ActionConstants.Delete, BankMovements.Resource),
     ];
 }

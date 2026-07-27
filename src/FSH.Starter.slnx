@@ -76,6 +76,7 @@
     <Project Path="Tests/Architecture.Tests/Architecture.Tests.csproj" />
     <Project Path="Tests/Auditing.Tests/Auditing.Tests.csproj" />
     <Project Path="Tests/Billing.Tests/Billing.Tests.csproj" />
+    <Project Path="Tests/Cashflow.Tests/Cashflow.Tests.csproj" />
     <Project Path="Tests/Catalog.Tests/Catalog.Tests.csproj" />
     <Project Path="Tests/Chat.Tests/Chat.Tests.csproj" />
     <Project Path="Tests/Webhooks.Tests/Webhooks.Tests.csproj" />

@@ -26,7 +26,8 @@ public sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
         builder.Property(x => x.CountryId).HasColumnName("PaisId");
         builder.Property(x => x.CompanyId).HasColumnName("EmpresaId");
         builder.Property(x => x.StatusId).HasColumnName("EstadoId");
-        builder.Property(x => x.PrefixId).HasColumnName("PrefijoId");
+        // Spec §2.1: the project's category link is PrefijoCategoriaId (a Prefix of Tipo=CATEGORIA).
+        builder.Property(x => x.PrefixId).HasColumnName("PrefijoCategoriaId");
 
         builder.HasIndex(x => x.ClientId);
         builder.HasIndex(x => x.SocietyId);

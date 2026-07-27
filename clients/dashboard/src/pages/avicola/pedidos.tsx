@@ -188,9 +188,9 @@ function PedidoEditorDialog({ state, onClose }: { state: EditorState; onClose: (
   const pedido = state.mode === "edit" ? state.pedido : undefined;
   const queryClient = useQueryClient();
 
-  const proveedoresQ = useQuery({ queryKey: ["administration", "suppliers", "options"], queryFn: () => suppliersApi.search({ pageSize: 200, sortBy: "name", sortDir: "asc" }), enabled: isOpen });
-  const lotesQ = useQuery({ queryKey: ["avicola", "lotes", "options"], queryFn: () => searchLotes({ pageSize: 200, sortBy: "fechaIngreso", sortDir: "desc" }), enabled: isOpen });
-  const galponesQ = useQuery({ queryKey: ["avicola", "galpones", "options"], queryFn: () => searchGalpones({ pageSize: 200, sortBy: "nombre", sortDir: "asc" }), enabled: isOpen });
+  const proveedoresQ = useQuery({ queryKey: ["administration", "suppliers", "options"], queryFn: () => suppliersApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }), enabled: isOpen });
+  const lotesQ = useQuery({ queryKey: ["avicola", "lotes", "options"], queryFn: () => searchLotes({ pageSize: 10000, sortBy: "fechaIngreso", sortDir: "desc" }), enabled: isOpen });
+  const galponesQ = useQuery({ queryKey: ["avicola", "galpones", "options"], queryFn: () => searchGalpones({ pageSize: 10000, sortBy: "nombre", sortDir: "asc" }), enabled: isOpen });
 
   const provOpts: ComboboxOption[] = (proveedoresQ.data?.items ?? []).map((s) => ({ value: s.id, label: s.name, hint: s.code ?? undefined }));
   const loteOpts: ComboboxOption[] = (lotesQ.data?.items ?? []).map((l) => ({ value: l.id, label: l.codigo }));

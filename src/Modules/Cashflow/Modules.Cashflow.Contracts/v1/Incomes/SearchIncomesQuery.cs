@@ -13,10 +13,13 @@ namespace FSH.Modules.Cashflow.Contracts.v1.Incomes;
 /// <param name="SortBy">Sort column. One of: amount | date | percentage.</param>
 /// <param name="SortDir">Sort direction. One of: asc | desc.</param>
 /// <param name="ProjectId">Optional filter — only incomes belonging to this project.</param>
+/// <param name="Unlinked">Optional filter — when true, only incomes not yet linked to an invoice
+/// (used by the invoice line-linking picker).</param>
 public sealed record SearchIncomesQuery(
     string? Search = null,
     int PageNumber = 1,
     int PageSize = 20,
     string? SortBy = null,
     string? SortDir = null,
-    Guid? ProjectId = null) : IQuery<PagedResponse<IncomeDto>>;
+    Guid? ProjectId = null,
+    bool? Unlinked = null) : IQuery<PagedResponse<IncomeDto>>;

@@ -13,8 +13,8 @@ public static class SearchCompaniesEndpoint
 {
     internal static RouteHandlerBuilder MapSearchCompaniesEndpoint(this IEndpointRouteBuilder endpoints) =>
         endpoints.MapGet("/companies",
-            (string? search, int? pageNumber, int? pageSize, string? sortBy, string? sortDir, IMediator mediator, CancellationToken ct) =>
-                mediator.Send(new SearchCompaniesQuery(search, pageNumber ?? 1, pageSize ?? 20, sortBy, sortDir), ct))
+            (string? search, int? pageNumber, int? pageSize, string? sortBy, string? sortDir, bool? showInProjects, IMediator mediator, CancellationToken ct) =>
+                mediator.Send(new SearchCompaniesQuery(search, pageNumber ?? 1, pageSize ?? 20, sortBy, sortDir, showInProjects), ct))
             .WithName("SearchCompanies")
             .WithSummary("Search companies (paged)")
             .RequirePermission(CashflowPermissions.Companies.View);

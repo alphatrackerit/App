@@ -16,14 +16,30 @@ public sealed class SearchProjectsQueryHandler(CashflowDbContext dbContext)
         ArgumentNullException.ThrowIfNull(query);
 
         int page = query.PageNumber < 1 ? 1 : query.PageNumber;
-        int size = query.PageSize is < 1 or > 200 ? 20 : query.PageSize;
+        int size = query.PageSize is < 1 or > 10000 ? 20 : query.PageSize;
 
         var q = dbContext.Projects.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            string term = query.Search.Trim();
-            q = q.Where(p => EF.Functions.ILike(p.Name, $"%{term}%"));
+            // Every word of the term must match somewhere: the project name OR the name of its
+            // client / country / status / company. Word-by-word so "SET ENERGY" matches even with
+            // irregular whitespace in the data or terms spread across different columns.
+            foreach (string word in query.Search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                string pattern = $"%{word}%";
+                q = q.Where(p =>
+                    EF.Functions.ILike(p.Name, pattern) ||
+                    dbContext.Clients.Any(c => c.Id == p.ClientId && EF.Functions.ILike(c.Name, pattern)) ||
+                    dbContext.Countries.Any(c => c.Id == p.CountryId && EF.Functions.ILike(c.Name, pattern)) ||
+                    dbContext.Statuses.Any(s => s.Id == p.StatusId && EF.Functions.ILike(s.Name, pattern)) ||
+                    dbContext.Companies.Any(c => c.Id == p.CompanyId && EF.Functions.ILike(c.Name, pattern)));
+            }
+        }
+
+        if (query.CompanyId is Guid companyId)
+        {
+            q = q.Where(p => p.CompanyId == companyId);
         }
 
         q = ApplySort(q, query.SortBy, query.SortDir);

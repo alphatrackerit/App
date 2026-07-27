@@ -8,8 +8,13 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\BuildingBlocks\Persistence\Persistence.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Storage\Storage.csproj" />
 		<ProjectReference Include="..\..\..\BuildingBlocks\Web\Web.csproj" />
 		<ProjectReference Include="..\Modules.Cashflow.Contracts\Modules.Cashflow.Contracts.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Anthropic" />
 	</ItemGroup>
 
 </Project>
