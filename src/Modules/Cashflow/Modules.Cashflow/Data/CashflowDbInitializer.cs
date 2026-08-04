@@ -48,6 +48,20 @@ public sealed class CashflowDbInitializer(
         (StatusType.FacturaRecibida, "PENDIENTE"),
         (StatusType.FacturaRecibida, "PAGADA PARCIAL"),
         (StatusType.FacturaRecibida, "PAGADA"),
+        (StatusType.ProformaEmitida, "BORRADOR"),
+        (StatusType.ProformaEmitida, "ENVIADA"),
+        (StatusType.ProformaEmitida, "ACEPTADA"),
+        (StatusType.ProformaEmitida, "RECHAZADA"),
+        (StatusType.ProformaEmitida, "FACTURADA PARCIAL"),
+        (StatusType.ProformaEmitida, "FACTURADA COMPLETA"),
+        (StatusType.ProformaEmitida, "CANCELADA"),
+        (StatusType.ProformaRecibida, "BORRADOR"),
+        (StatusType.ProformaRecibida, "ENVIADA"),
+        (StatusType.ProformaRecibida, "ACEPTADA"),
+        (StatusType.ProformaRecibida, "RECHAZADA"),
+        (StatusType.ProformaRecibida, "FACTURADA PARCIAL"),
+        (StatusType.ProformaRecibida, "FACTURADA COMPLETA"),
+        (StatusType.ProformaRecibida, "CANCELADA"),
     ];
 
     private async Task SeedStatusesAsync(CancellationToken cancellationToken)

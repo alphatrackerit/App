@@ -19,6 +19,8 @@ namespace FSH.Modules.Cashflow.Contracts.v1.Invoices;
 /// <param name="SupplierId">When set, only invoices of this supplier.</param>
 /// <param name="CompanyId">When set, only invoices belonging to this company.</param>
 /// <param name="ProjectId">When set, only invoices assigned to this project.</param>
+/// <param name="VerifactuStatus">When set, only invoices in this VERI*FACTU state (e.g. surfacing
+/// Rechazada/ErrorTecnico incidents).</param>
 public sealed record SearchInvoicesQuery(
     string? Search = null,
     int PageNumber = 1,
@@ -29,4 +31,5 @@ public sealed record SearchInvoicesQuery(
     Guid? ClientId = null,
     Guid? SupplierId = null,
     Guid? CompanyId = null,
-    Guid? ProjectId = null) : IQuery<PagedResponse<InvoiceDto>>;
+    Guid? ProjectId = null,
+    VerifactuStatus? VerifactuStatus = null) : IQuery<PagedResponse<InvoiceDto>>;

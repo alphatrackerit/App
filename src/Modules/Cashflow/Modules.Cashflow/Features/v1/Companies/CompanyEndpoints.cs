@@ -41,6 +41,23 @@ public static class UpdateCompanyEndpoint
             .RequirePermission(CashflowPermissions.Companies.Update);
 }
 
+public static class SetCompanyLogoEndpoint
+{
+    internal static RouteHandlerBuilder MapSetCompanyLogoEndpoint(this IEndpointRouteBuilder endpoints) =>
+        endpoints.MapPost("/companies/{id:guid}/logo",
+            async (Guid id, IFormFile file, IMediator mediator, CancellationToken ct) =>
+            {
+                using var ms = new MemoryStream();
+                await file.CopyToAsync(ms, ct);
+                string path = await mediator.Send(new SetCompanyLogoCommand(id, ms.ToArray(), file.FileName, file.ContentType), ct);
+                return Results.Ok(new { logoPath = path });
+            })
+            .WithName("SetCompanyLogo")
+            .WithSummary("Upload or replace the company logo used on invoice PDFs")
+            .RequirePermission(CashflowPermissions.Companies.Update)
+            .DisableAntiforgery();
+}
+
 public static class DeleteCompanyEndpoint
 {
     internal static RouteHandlerBuilder MapDeleteCompanyEndpoint(this IEndpointRouteBuilder endpoints) =>

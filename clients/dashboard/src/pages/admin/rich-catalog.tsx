@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Banknote, Building, Building2, Globe, Hash, Landmark, ListChecks, Pencil, Plus, Search, Trash2, Truck, Users, type LucideIcon } from "lucide-react";
@@ -14,6 +14,7 @@ import {
   societiesApi,
   statusCatalog,
   supplierCatalog,
+  uploadCompanyLogo,
   type BankInput,
   type BankMovementRow,
   type BankRow,
@@ -1072,6 +1073,12 @@ function CompanyEditor({ state, api, queryKey, onClose }: EditorProps<CompanyRow
   const [code, setCode] = useState("");
   const [legalName, setLegalName] = useState("");
   const [taxRegistration, setTaxRegistration] = useState("");
+  const [nif, setNif] = useState("");
+  const [address, setAddress] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [showInProjects, setShowInProjects] = useState(true);
 
   useEffect(() => {
@@ -1080,9 +1087,27 @@ function CompanyEditor({ state, api, queryKey, onClose }: EditorProps<CompanyRow
       setCode(item?.code ?? "");
       setLegalName(item?.legalName ?? "");
       setTaxRegistration(item?.taxRegistration ?? "");
+      setNif(item?.nif ?? "");
+      setAddress(item?.address ?? "");
+      setPostalCode(item?.postalCode ?? "");
+      setCity(item?.city ?? "");
+      setPhone(item?.phone ?? "");
+      setEmail(item?.email ?? "");
       setShowInProjects(item?.showInProjects ?? true);
     }
   }, [isOpen, item]);
+
+  // Logo — subida directa (solo en edición: hace falta el id de la empresa).
+  const queryClient = useQueryClient();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const logoUpload = useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => uploadCompanyLogo(id, file),
+    onSuccess: () => {
+      toast.success("Logo guardado — aparecerá en el PDF de las facturas");
+      queryClient.invalidateQueries({ queryKey: ["administration", "companies"] });
+    },
+    onError: (err) => toast.error("No se pudo subir el logo", { description: describe(err) }),
+  });
 
   const save = useSaveMutation(api, queryKey, item, onClose);
   const trimmed = name.trim();
@@ -1098,7 +1123,11 @@ function CompanyEditor({ state, api, queryKey, onClose }: EditorProps<CompanyRow
       onSubmit={(e) => {
         e.preventDefault();
         if (!trimmed) return;
-        save.mutate({ name: trimmed, code: nn(code), legalName: nn(legalName), taxRegistration: nn(taxRegistration), showInProjects });
+        save.mutate({
+          name: trimmed, code: nn(code), legalName: nn(legalName), taxRegistration: nn(taxRegistration),
+          showInProjects, nif: nn(nif), address: nn(address), postalCode: nn(postalCode), city: nn(city),
+          phone: nn(phone), email: nn(email),
+        });
       }}
     >
       <Field id="e-name" label="Nombre" required>
@@ -1115,6 +1144,58 @@ function CompanyEditor({ state, api, queryKey, onClose }: EditorProps<CompanyRow
           <Input id="e-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Opcional" maxLength={64} />
         </Field>
       </div>
+      <Field id="e-nif" label="NIF" hint="Obligatorio para emitir con VeriFactu (registro AEAT por empresa).">
+        <Input id="e-nif" value={nif} onChange={(e) => setNif(e.target.value)} placeholder="B12345678" maxLength={20} />
+      </Field>
+      <Field id="e-address" label="Dirección" hint="Aparece en la cabecera del PDF de las facturas.">
+        <Input id="e-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Calle y número" maxLength={512} />
+      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field id="e-cp" label="Código postal">
+          <Input id="e-cp" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="28001" maxLength={32} />
+        </Field>
+        <Field id="e-city" label="Ciudad">
+          <Input id="e-city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Madrid" maxLength={128} />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Field id="e-phone" label="Teléfono">
+          <Input id="e-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Opcional" maxLength={64} />
+        </Field>
+        <Field id="e-email" label="Email">
+          <Input id="e-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Opcional" maxLength={256} />
+        </Field>
+      </div>
+      {item && (
+        <div className="flex items-center justify-between rounded-lg border border-[var(--color-border)] px-3 py-2">
+          <div className="min-w-0">
+            <p className="text-[13px] text-[var(--color-foreground)]">Logo</p>
+            <p className="truncate text-[11.5px] text-[var(--color-muted-foreground)]">
+              {item.logoPath ? "Hay un logo guardado — se incrusta en el PDF." : "Imagen PNG/JPG, máx. 1 MB."}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={logoUpload.isPending}
+            onClick={() => logoInputRef.current?.click()}
+            className="h-8 rounded-lg px-3 text-[12.5px]"
+          >
+            {logoUpload.isPending ? "Subiendo…" : item.logoPath ? "Reemplazar" : "Subir logo"}
+          </Button>
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file && item) logoUpload.mutate({ id: item.id, file });
+              e.target.value = "";
+            }}
+          />
+        </div>
+      )}
       <div className="flex items-center justify-between rounded-lg border border-[var(--color-border)] px-3 py-2">
         <div>
           <p className="text-[13px] text-[var(--color-foreground)]">Visible en proyectos</p>

@@ -43,6 +43,20 @@ public static class CashflowPermissions
         public const string ValidateIncome = $"Permissions.{Resource}.ValidateIncome";
         public const string ConfirmPago    = $"Permissions.{Resource}.ConfirmPago";
         public const string ValidatePago   = $"Permissions.{Resource}.ValidatePago";
+        // VERI*FACTU (AEAT) — issuing is irreversible; settings hold the company certificate.
+        public const string IssueVerifactu           = $"Permissions.{Resource}.IssueVerifactu";
+        public const string ManageVerifactuSettings  = $"Permissions.{Resource}.ManageVerifactuSettings";
+    }
+
+    // Proformas — commercial pre-invoice documents, one level above Invoice (1 proforma → N invoices).
+    public static class Proformas
+    {
+        public const string Resource = "Proformas";
+        public const string View   = $"Permissions.{Resource}.View";
+        public const string Create = $"Permissions.{Resource}.Create";
+        public const string Update = $"Permissions.{Resource}.Update";
+        public const string Delete = $"Permissions.{Resource}.Delete";
+        public const string GenerateInvoices = $"Permissions.{Resource}.GenerateInvoices";
     }
 
     public static class Reportes
@@ -171,6 +185,14 @@ public static class CashflowPermissions
         new("Validate income (billing)",  "ValidateIncome", Facturacion.Resource),
         new("Confirm payment (billing)",  "ConfirmPago",    Facturacion.Resource),
         new("Validate payment (billing)", "ValidatePago",   Facturacion.Resource),
+        new("Issue invoice under VERI*FACTU", "IssueVerifactu", Facturacion.Resource),
+        new("Manage VeriFactu settings",  "ManageVerifactuSettings", Facturacion.Resource),
+
+        new("View Proformas",   ActionConstants.View,   Proformas.Resource, IsBasic: true),
+        new("Create Proformas", ActionConstants.Create, Proformas.Resource),
+        new("Update Proformas", ActionConstants.Update, Proformas.Resource),
+        new("Delete Proformas", ActionConstants.Delete, Proformas.Resource),
+        new("Generate invoices from proforma", "GenerateInvoices", Proformas.Resource),
 
         new("View reports", ActionConstants.View, Reportes.Resource, IsBasic: true),
 

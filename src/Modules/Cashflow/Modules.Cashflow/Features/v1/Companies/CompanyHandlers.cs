@@ -14,7 +14,9 @@ public sealed class CreateCompanyCommandHandler(CashflowDbContext db) : ICommand
     public async ValueTask<Guid> Handle(CreateCompanyCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var entity = Company.Create(command.Name, command.Code, command.LegalName, command.TaxRegistration, command.ShowInProjects);
+        var entity = Company.Create(
+            command.Name, command.Code, command.LegalName, command.TaxRegistration, command.ShowInProjects,
+            command.Nif, command.Address, command.PostalCode, command.City, command.Phone, command.Email);
         db.Companies.Add(entity);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
@@ -29,6 +31,7 @@ public sealed class CreateCompanyCommandValidator : AbstractValidator<CreateComp
         RuleFor(x => x.Code).MaximumLength(64);
         RuleFor(x => x.LegalName).MaximumLength(256);
         RuleFor(x => x.TaxRegistration).MaximumLength(128);
+        RuleFor(x => x.Nif).MaximumLength(20);
     }
 }
 
@@ -39,7 +42,9 @@ public sealed class UpdateCompanyCommandHandler(CashflowDbContext db) : ICommand
         ArgumentNullException.ThrowIfNull(command);
         var entity = await db.Companies.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Company {command.Id} not found.");
-        entity.Update(command.Name, command.Code, command.LegalName, command.TaxRegistration, command.ShowInProjects);
+        entity.Update(
+            command.Name, command.Code, command.LegalName, command.TaxRegistration, command.ShowInProjects,
+            command.Nif, command.Address, command.PostalCode, command.City, command.Phone, command.Email);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity.Id;
     }
@@ -54,6 +59,7 @@ public sealed class UpdateCompanyCommandValidator : AbstractValidator<UpdateComp
         RuleFor(x => x.Code).MaximumLength(64);
         RuleFor(x => x.LegalName).MaximumLength(256);
         RuleFor(x => x.TaxRegistration).MaximumLength(128);
+        RuleFor(x => x.Nif).MaximumLength(20);
     }
 }
 
@@ -108,7 +114,9 @@ public sealed class SearchCompaniesQueryHandler(CashflowDbContext db) : IQueryHa
         var items = await q.Skip((page - 1) * size).Take(size).ToListAsync(cancellationToken).ConfigureAwait(false);
         return new PagedResponse<CompanyDto>
         {
-            Items = items.Select(x => new CompanyDto(x.Id, x.Name, x.Code, x.LegalName, x.TaxRegistration, x.ShowInProjects)).ToList(),
+            Items = items.Select(x => new CompanyDto(
+                x.Id, x.Name, x.Code, x.LegalName, x.TaxRegistration, x.ShowInProjects,
+                x.Nif, x.Address, x.PostalCode, x.City, x.Phone, x.Email, x.LogoPath)).ToList(),
             PageNumber = page,
             PageSize = size,
             TotalCount = total,

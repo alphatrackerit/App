@@ -46,6 +46,11 @@ public sealed class SearchInvoicesQueryHandler(CashflowDbContext dbContext)
             q = q.Where(i => i.ProjectId == query.ProjectId.Value);
         }
 
+        if (query.VerifactuStatus.HasValue)
+        {
+            q = q.Where(i => i.VerifactuStatus == query.VerifactuStatus.Value);
+        }
+
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             // Every word of the term must match somewhere: invoice number/Dynamics number, bank,

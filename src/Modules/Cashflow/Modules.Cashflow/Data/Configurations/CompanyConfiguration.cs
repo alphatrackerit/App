@@ -16,6 +16,13 @@ public sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
         builder.Property(x => x.LegalName).HasColumnName("RazonSocial").HasMaxLength(256);
         builder.Property(x => x.TaxRegistration).HasColumnName("RegistroFiscal").HasMaxLength(128);
         builder.Property(x => x.ShowInProjects).HasColumnName("VisibleEnProyectos").IsRequired().HasDefaultValue(true);
+        builder.Property(x => x.Nif).HasColumnName("Nif").HasMaxLength(20);
+        builder.Property(x => x.Address).HasColumnName("Direccion").HasMaxLength(512);
+        builder.Property(x => x.PostalCode).HasColumnName("CodigoPostal").HasMaxLength(32);
+        builder.Property(x => x.City).HasColumnName("Ciudad").HasMaxLength(128);
+        builder.Property(x => x.Phone).HasColumnName("Telefono").HasMaxLength(64);
+        builder.Property(x => x.Email).HasColumnName("Email").HasMaxLength(256);
+        builder.Property(x => x.LogoPath).HasColumnName("Logo").HasMaxLength(512);
         builder.HasIndex(x => x.Name);
         builder.Ignore(x => x.DomainEvents);
     }

@@ -26,4 +26,5 @@ public sealed record CreateInvoiceCommand(
     Guid? StatusId = null,
     string? DynamicsNumber = null,
     string? Notes = null,
-    string? DocumentPath = null) : ICommand<Guid>;
+    string? DocumentPath = null,
+    IReadOnlyList<InvoiceItemInput>? Items = null) : ICommand<Guid>;

@@ -30,6 +30,11 @@ public sealed class CreateInvoiceCommandHandler(CashflowDbContext dbContext)
             invoice.AttachDocument(command.DocumentPath);
         }
 
+        if (command.Items is { Count: > 0 })
+        {
+            invoice.SetItems(command.Items.Select(i => (i.Description, i.Quantity, i.UnitPrice)));
+        }
+
         dbContext.Invoices.Add(invoice);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return invoice.Id;

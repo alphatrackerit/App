@@ -18,6 +18,9 @@ public sealed class DeleteInvoiceCommandHandler(CashflowDbContext dbContext)
             .ConfigureAwait(false)
             ?? throw new NotFoundException($"Invoice {command.InvoiceId} not found.");
 
+        // A VeriFactu-registered invoice is immutable (409) — deleting it would break the AEAT chain.
+        invoice.EnsureNotVerifactuRegistered();
+
         // ON DELETE SET NULL (config) unlinks any Income/Payment lines back to forecast state.
         dbContext.Invoices.Remove(invoice);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

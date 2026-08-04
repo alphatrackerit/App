@@ -125,6 +125,10 @@ const PanelFacturacionPage = lazyNamed(() => import("@/pages/facturacion/panel")
 const VencimientosPage = lazyNamed(() => import("@/pages/facturacion/vencimientos"), "VencimientosPage");
 const PagosCobrosPage = lazyNamed(() => import("@/pages/facturacion/pagos-cobros"), "PagosCobrosPage");
 const RemesasPage = lazyNamed(() => import("@/pages/facturacion/remesas"), "RemesasPage");
+const ProformasPage = lazyNamed(() => import("@/pages/facturacion/proformas"), "ProformasPage");
+const VerifactuSettingsPage = lazyNamed(() => import("@/pages/facturacion/verifactu"), "VerifactuSettingsPage");
+const EmpresasFacturacionPage = lazyNamed(() => import("@/pages/facturacion/empresas"), "EmpresasFacturacionPage");
+const ResumenPage = lazyNamed(() => import("@/pages/projects/resumen"), "ResumenPage");
 const FlujoDeCajaPage = lazyNamed(() => import("@/pages/projects/cashflow"), "FlujoDeCajaPage");
 const GraficosPage = lazyNamed(() => import("@/pages/projects/graficos"), "GraficosPage");
 const LogPage = lazyNamed(() => import("@/pages/projects/log"), "LogPage");
@@ -241,6 +245,7 @@ export const router = createBrowserRouter([
           { path: "projects", element: withSuspense(<ProjectsPage />) },
           { path: "projects/:projectId", element: withSuspense(<ProjectDetailPage />) },
           { path: "empresas", element: withSuspense(<EmpresasPage />) },
+          { path: "resumen", element: withSuspense(<ResumenPage />) },
           { path: "flujo-de-caja", element: withSuspense(<FlujoDeCajaPage />) },
           { path: "graficos", element: withSuspense(<GraficosPage />) },
           { path: "log", element: withSuspense(<LogPage />) },
@@ -263,6 +268,9 @@ export const router = createBrowserRouter([
           { path: "admin/facturas", element: <Navigate to="/facturacion/facturas" replace /> },
           { path: "facturacion", element: withSuspense(<PanelFacturacionPage />) },
           { path: "facturacion/facturas", element: withSuspense(<FacturasPage />) },
+          { path: "facturacion/proformas", element: withSuspense(<ProformasPage />) },
+          { path: "facturacion/verifactu", element: withSuspense(<VerifactuSettingsPage />) },
+          { path: "facturacion/empresas", element: withSuspense(<EmpresasFacturacionPage />) },
           { path: "facturacion/vencimientos", element: withSuspense(<VencimientosPage />) },
           { path: "facturacion/pagos-cobros", element: withSuspense(<PagosCobrosPage />) },
           { path: "facturacion/remesas", element: withSuspense(<RemesasPage />) },

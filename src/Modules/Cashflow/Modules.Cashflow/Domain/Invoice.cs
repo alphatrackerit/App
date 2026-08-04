@@ -49,17 +49,33 @@ public sealed class Invoice : AggregateRoot<Guid>
     /// <summary>Source bank (received SOLUTIONS schema only) — free text.</summary>
     public string? Bank { get; private set; }
 
+    /// <summary>Proforma this invoice was generated from / linked to (real intra-module FK,
+    /// ON DELETE SET NULL). Purely informative traceability — never affects VeriFactu.</summary>
+    public Guid? ProformaId { get; private set; }
+
     /// <summary>Soft reference to the Status catalog (indexed, no FK).</summary>
     public Guid? StatusId { get; private set; }
 
-    /// <summary>"COMPROBADO CON LISTADO" — reconciled against the master listing (§3).</summary>
+    /// <summary>"COMPROBADO CON LISTADO" — reconciled against the master listing (§3).
+    /// Internal check — NOT related to <see cref="VerifactuStatus"/> (AEAT VERI*FACTU).</summary>
     public bool Verified { get; private set; }
+
+    /// <summary>AEAT VERI*FACTU state. <c>NoAplica</c> until issued (and always for Recibidas).
+    /// Once <c>PendienteEnvio</c> or beyond, the invoice is fiscally registered and immutable —
+    /// <see cref="Update"/> and deletion refuse with 409.</summary>
+    public VerifactuStatus VerifactuStatus { get; private set; } = VerifactuStatus.NoAplica;
 
     public string? Notes { get; private set; }
 
     /// <summary>Storage key of the attached source document (PDF/image the invoice was created
     /// from). Nullable — most legacy-loaded invoices have none.</summary>
     public string? DocumentPath { get; private set; }
+
+    private readonly List<InvoiceItem> _items = [];
+
+    /// <summary>Conceptos — presentational detail lines for the PDF. Optional; the fiscal amounts
+    /// stay in TaxBase/Vat/Total. Replaced as a whole via <see cref="SetItems"/>.</summary>
+    public IReadOnlyList<InvoiceItem> Items => _items.AsReadOnly();
 
     private Invoice() { }
 
@@ -162,6 +178,7 @@ public sealed class Invoice : AggregateRoot<Guid>
         Guid? projectId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(number);
+        EnsureNotVerifactuRegistered();
         Number = number.Trim();
         Total = total;
         InvoiceDate = NormalizeDate(invoiceDate);
@@ -180,7 +197,49 @@ public sealed class Invoice : AggregateRoot<Guid>
         Notes = notes?.Trim();
     }
 
+    /// <summary>Replaces the concept lines. Guarded like <see cref="Update"/>: a VeriFactu-registered
+    /// invoice is immutable, its PDF included.</summary>
+    public void SetItems(IEnumerable<(string Description, decimal Quantity, decimal UnitPrice)> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        EnsureNotVerifactuRegistered();
+        _items.Clear();
+        int position = 0;
+        foreach (var (description, quantity, unitPrice) in items)
+        {
+            _items.Add(InvoiceItem.Create(Id, position++, description, quantity, unitPrice));
+        }
+    }
+
     public void MarkVerified() => Verified = true;
+
+    /// <summary>Links this invoice to a proforma (or unlinks with null). Kept off
+    /// <see cref="Update"/> so a routine edit never silently re-links — same rule as
+    /// <c>Income.LinkInvoice</c>/<c>Payment.LinkInvoice</c>.</summary>
+    public void LinkProforma(Guid? proformaId) => ProformaId = proformaId;
+
+    /// <summary>Marks the invoice as VeriFactu-issued (chained record generated, pending send).
+    /// From this point the invoice is fiscally registered and immutable.</summary>
+    public void MarkVerifactuIssued() => VerifactuStatus = Contracts.Enums.VerifactuStatus.PendienteEnvio;
+
+    /// <summary>Records the AEAT submission outcome for this invoice.</summary>
+    public void MarkVerifactuResult(VerifactuStatus status) => VerifactuStatus = status;
+
+    /// <summary>A registered invoice is immutable before the AEAT: editing or deleting it would
+    /// break the hash chain. Fixing a mistake requires a rectificativa (future work).</summary>
+    public void EnsureNotVerifactuRegistered()
+    {
+        if (VerifactuStatus is Contracts.Enums.VerifactuStatus.PendienteEnvio
+            or Contracts.Enums.VerifactuStatus.Enviada
+            or Contracts.Enums.VerifactuStatus.Aceptada
+            or Contracts.Enums.VerifactuStatus.AceptadaConErrores)
+        {
+            throw new FSH.Framework.Core.Exceptions.CustomException(
+                "La factura está registrada en VERI*FACTU y es inmutable; para corregirla emite una rectificativa.",
+                Array.Empty<string>(),
+                System.Net.HttpStatusCode.Conflict);
+        }
+    }
 
     public void SetStatus(Guid? statusId) => StatusId = statusId;
 

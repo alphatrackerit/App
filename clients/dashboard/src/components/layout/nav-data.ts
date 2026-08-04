@@ -10,6 +10,7 @@ import {
   Building2,
   Calculator,
   CreditCard,
+  FileSpreadsheet,
   FileText,
   Flag,
   Landmark,
@@ -78,6 +79,7 @@ export const sections: NavSection[] = [
     caption: "Proyectos",
     icon: Briefcase,
     items: [
+      { to: "/resumen", label: "Resumen", icon: LayoutDashboard, perm: "Permissions.Projects.Projects.View" },
       { to: "/projects", label: "Proyectos", icon: Briefcase, perm: "Permissions.Projects.Projects.View" },
       { to: "/flujo-de-caja", label: "Flujo de caja", icon: ArrowLeftRight, perm: "Permissions.Projects.Projects.View" },
       { to: "/graficos", label: "Gráficos", icon: BarChart3, perm: "Permissions.Projects.Projects.View" },
@@ -92,9 +94,12 @@ export const sections: NavSection[] = [
     items: [
       { to: "/facturacion", label: "Panel", icon: LayoutDashboard, perm: "Permissions.Facturacion.View" },
       { to: "/facturacion/facturas", label: "Facturas", icon: FileText, perm: "Permissions.Facturacion.View" },
+      { to: "/facturacion/empresas", label: "Empresas", icon: Building2, perm: "Permissions.Facturacion.View" },
+      { to: "/facturacion/proformas", label: "Proformas", icon: FileSpreadsheet, perm: "Permissions.Proformas.View" },
       { to: "/facturacion/vencimientos", label: "Vencimientos", icon: CalendarClock, perm: "Permissions.Facturacion.View" },
       { to: "/facturacion/pagos-cobros", label: "Pagos y cobros", icon: Banknote, perm: "Permissions.Facturacion.View" },
       { to: "/facturacion/remesas", label: "Remesas", icon: Send, perm: "Permissions.Facturacion.View" },
+      { to: "/facturacion/verifactu", label: "VeriFactu", icon: ShieldCheck, perm: "Permissions.Facturacion.ManageVerifactuSettings" },
     ],
   },
   {

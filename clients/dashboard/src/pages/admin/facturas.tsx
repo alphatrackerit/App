@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarClock,
@@ -19,6 +20,7 @@ import {
   Trash2,
   Undo2,
   Unlink,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -26,7 +28,9 @@ import {
   attachInvoiceDocument,
   createFactura,
   deleteFactura,
+  downloadFacturaPdf,
   extractInvoice,
+  getFactura,
   getFacturaLines,
   getInvoiceDocumentUrl,
   getInvoicesReport,
@@ -54,6 +58,8 @@ import {
   validateIncome,
   validatePayment,
 } from "@/api/projects";
+import { linkInvoiceToProforma, searchProformas } from "@/api/proformas";
+import { issueVerifactu, type VerifactuStatus } from "@/api/verifactu";
 import { clientsApi, companiesApi, societiesApi, statusesApi, suppliersApi } from "@/api/administration";
 import { Button } from "@/components/ui/button";
 import {
@@ -140,6 +146,30 @@ const TYPE_OPTIONS: { value: FacturaType; label: string }[] = [
   { value: "Recibida", label: "Recibida" },
 ];
 
+// ─── VERI*FACTU (AEAT) — estado registrado = factura inmutable. "Rechazada" NO bloquea:
+// la AEAT no registró nada, la factura sigue siendo corregible. ───
+const VF_REGISTERED: readonly VerifactuStatus[] = ["PendienteEnvio", "Enviada", "Aceptada", "AceptadaConErrores"];
+const VF_LABEL: Record<VerifactuStatus, string> = {
+  NoAplica: "—",
+  PendienteEnvio: "VeriFactu: pendiente de envío",
+  Enviada: "VeriFactu: enviada a la AEAT",
+  Aceptada: "VeriFactu: aceptada",
+  AceptadaConErrores: "VeriFactu: aceptada con errores",
+  Rechazada: "VeriFactu: RECHAZADA",
+  ErrorTecnico: "VeriFactu: error técnico de envío",
+};
+function vfTone(s: VerifactuStatus): "success" | "danger" | "warning" | "info" | "default" {
+  switch (s) {
+    case "Aceptada": return "success";
+    case "AceptadaConErrores": return "warning";
+    case "Rechazada":
+    case "ErrorTecnico": return "danger";
+    case "PendienteEnvio":
+    case "Enviada": return "info";
+    default: return "default";
+  }
+}
+
 // ══════════════════════ Page shell ══════════════════════
 
 export function FacturasPage() {
@@ -148,6 +178,18 @@ export function FacturasPage() {
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [editor, setEditor] = useState<EditorState>({ mode: "closed" });
+  // "Empresas" de Facturación llega con ?empresa=<id> → listado filtrado por esa empresa.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const soloCompanyId = searchParams.get("empresa");
+  const soloCompanyQ = useQuery({
+    queryKey: ["administration", "companies", "options"],
+    queryFn: () => companiesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }),
+    enabled: !!soloCompanyId,
+  });
+  const soloCompanyName = soloCompanyId
+    ? (soloCompanyQ.data?.items.find((c) => c.id === soloCompanyId)?.name ?? "…")
+    : null;
+  useEffect(() => setPageNumber(1), [soloCompanyId]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -158,10 +200,30 @@ export function FacturasPage() {
   }, [search]);
 
   const q = useQuery({
-    queryKey: ["administration", "facturas", { search: debouncedSearch, pageNumber, pageSize }],
-    queryFn: () => searchFacturas({ search: debouncedSearch || undefined, pageNumber, pageSize, sortDir: "desc" }),
+    queryKey: ["administration", "facturas", { search: debouncedSearch, pageNumber, pageSize, companyId: soloCompanyId }],
+    queryFn: () =>
+      searchFacturas({
+        search: debouncedSearch || undefined,
+        pageNumber,
+        pageSize,
+        sortDir: "desc",
+        companyId: soloCompanyId ?? undefined,
+      }),
     placeholderData: keepPreviousData,
   });
+
+  // Incidencias VeriFactu: una factura Rechazada deja al tenant en incumplimiento — visible sin buscarla.
+  const vfIncidentsQ = useQuery({
+    queryKey: ["administration", "facturas", "vf-incidents"],
+    queryFn: async () => {
+      const [rechazadas, errores] = await Promise.all([
+        searchFacturas({ pageSize: 1, verifactuStatus: "Rechazada" }),
+        searchFacturas({ pageSize: 1, verifactuStatus: "ErrorTecnico" }),
+      ]);
+      return { rechazadas: rechazadas.totalCount, errores: errores.totalCount };
+    },
+  });
+  const vfIncidents = vfIncidentsQ.data;
 
   // Catálogos para resolver nombres (cliente/proveedor según tipo, y empresa).
   const clientsQ = useQuery({
@@ -239,6 +301,34 @@ export function FacturasPage() {
         </Button>
       </EntityPageHeader>
 
+      {vfIncidents && (vfIncidents.rechazadas > 0 || vfIncidents.errores > 0) && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-2 rounded-lg border border-[oklch(from_var(--color-destructive)_l_c_h_/_0.30)] bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.06)] px-3 py-2 text-[13px] text-[var(--color-destructive)]"
+        >
+          <ShieldCheck className="size-4 shrink-0" />
+          <span className="font-semibold">Incidencias VeriFactu:</span>
+          {vfIncidents.rechazadas > 0 && <span>{vfIncidents.rechazadas} factura(s) rechazada(s) por la AEAT</span>}
+          {vfIncidents.rechazadas > 0 && vfIncidents.errores > 0 && <span>·</span>}
+          {vfIncidents.errores > 0 && <span>{vfIncidents.errores} con error técnico de envío</span>}
+          <span className="text-[12px] text-[var(--color-muted-foreground)]">— localízalas por el punto rojo junto al número.</span>
+        </div>
+      )}
+
+      {soloCompanyId && (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-muted)] py-1 pl-3 pr-1.5 text-[12.5px] text-[var(--color-foreground)]">
+          Empresa: <span className="font-semibold">{soloCompanyName}</span>
+          <button
+            type="button"
+            aria-label="Ver facturas de todas las empresas"
+            onClick={() => setSearchParams({}, { replace: true })}
+            className="grid size-5 cursor-pointer place-items-center rounded-full text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-border)] hover:text-[var(--color-foreground)]"
+          >
+            <X className="size-3" />
+          </button>
+        </span>
+      )}
+
       <EntitySearch value={search} onChange={setSearch} placeholder="Buscar por número, cliente, proveedor, empresa, banco o importe…" />
 
       {q.isLoading && items.length === 0 ? (
@@ -314,6 +404,22 @@ export function FacturasPage() {
                   <span className="truncate text-[14px] font-medium text-[var(--color-foreground)]">{it.number || "—"}</span>
                   {it.verified && (
                     <ShieldCheck className="size-3.5 shrink-0 text-[var(--color-primary)]" aria-label="Verificada" />
+                  )}
+                  {it.verifactuStatus !== "NoAplica" && (
+                    <span
+                      title={VF_LABEL[it.verifactuStatus]}
+                      aria-label={VF_LABEL[it.verifactuStatus]}
+                      className={
+                        "size-2 shrink-0 rounded-full " +
+                        (vfTone(it.verifactuStatus) === "success"
+                          ? "bg-[var(--color-success)]"
+                          : vfTone(it.verifactuStatus) === "danger"
+                            ? "bg-[var(--color-destructive)]"
+                            : vfTone(it.verifactuStatus) === "warning"
+                              ? "bg-[var(--color-warning)]"
+                              : "bg-[var(--color-info)]")
+                      }
+                    />
                   )}
                 </span>
                 <span>
@@ -1537,6 +1643,7 @@ type FacturaForm = {
   statusId: string | null;
   verified: boolean;
   documentPath: string | null;
+  proformaId: string | null;
 };
 
 const BLANK: FacturaForm = {
@@ -1559,6 +1666,7 @@ const BLANK: FacturaForm = {
   statusId: null,
   verified: false,
   documentPath: null,
+  proformaId: null,
 };
 
 function useLookupOptions(queryKey: string, loader: () => Promise<{ items: { id: string; name: string; code?: string | null }[] }>, enabled: boolean) {
@@ -1607,6 +1715,7 @@ function FacturaEditor({
               statusId: item.statusId,
               verified: item.verified,
               documentPath: item.documentPath,
+              proformaId: item.proformaId,
             }
           : BLANK,
       );
@@ -1687,6 +1796,54 @@ function FacturaEditor({
     onError: (err) => toast.error("No se pudo abrir el documento", { description: describe(err) }),
   });
 
+  // ── VERI*FACTU: emisión irreversible con confirmación de dos pasos ──
+  const vfRegistered = !!item && VF_REGISTERED.includes(item.verifactuStatus);
+  const [vfArmed, setVfArmed] = useState(false);
+  useEffect(() => {
+    if (isOpen) setVfArmed(false);
+  }, [isOpen]);
+  const vfIssue = useMutation({
+    mutationFn: (invoiceId: string) => issueVerifactu(invoiceId),
+    onSuccess: () => {
+      toast.success("Factura registrada en VERI*FACTU", { description: "El registro encadenado queda pendiente de envío a la AEAT." });
+      queryClient.invalidateQueries({ queryKey: ["administration", "facturas"] });
+      queryClient.invalidateQueries({ queryKey: ["verifactu"] });
+      onClose();
+    },
+    onError: (err) => toast.error("No se pudo emitir con VeriFactu", { description: describe(err) }),
+  });
+  const pdf = useMutation({
+    mutationFn: (vars: { id: string; number: string }) => downloadFacturaPdf(vars.id, vars.number),
+    onError: (err) => toast.error("No se pudo descargar el PDF", { description: describe(err) }),
+  });
+
+  // ── Conceptos (detalle presentable del PDF) — la fila de búsqueda no los trae, se cargan del detalle ──
+  const detailQ = useQuery({
+    queryKey: ["administration", "factura", item?.id],
+    queryFn: () => getFactura(item!.id),
+    enabled: isOpen && !!item,
+  });
+  const [conceptos, setConceptos] = useState<{ description: string; quantity: string; unitPrice: string }[]>([]);
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!item) {
+      setConceptos([]);
+      return;
+    }
+    setConceptos(
+      (detailQ.data?.items ?? []).map((i) => ({
+        description: i.description,
+        quantity: String(i.quantity),
+        unitPrice: String(i.unitPrice),
+      })),
+    );
+  }, [isOpen, item, detailQ.data]);
+  const conceptosSum = conceptos.reduce((s, c) => {
+    const q = Number(c.quantity.replace(",", "."));
+    const p = Number(c.unitPrice.replace(",", "."));
+    return Number.isFinite(q) && Number.isFinite(p) ? s + Math.round(q * p * 100) / 100 : s;
+  }, 0);
+
   // Adjuntar/reemplazar documento en una factura YA creada (digitalización posterior).
   const attachInputRef = useRef<HTMLInputElement>(null);
   const attach = useMutation({
@@ -1709,23 +1866,34 @@ function FacturaEditor({
     queryFn: () => searchProjects({ pageSize: 10000, sortBy: "name", sortDir: "asc" }),
     enabled: isOpen,
   });
+  const proformasQ = useQuery({
+    queryKey: ["proformas", "options"],
+    queryFn: () => searchProformas({ pageSize: 10000, sortBy: "number", sortDir: "asc" }),
+    enabled: isOpen,
+  });
 
   const save = useMutation({
     mutationFn: async ({
       input,
       verify,
       vencimientos,
+      proformaId,
     }: {
       input: FacturaInput;
       verify: boolean;
       vencimientos: { date: string; amount: number; percentage: number | null }[];
+      proformaId: string | null;
     }) => {
       if (item) {
         await updateFactura(item.id, input);
         if (verify) await verifyFactura(item.id);
+        if (proformaId !== (item.proformaId ?? null)) {
+          await linkInvoiceToProforma({ invoiceId: item.id, proformaId });
+        }
         return item.id;
       }
       const id = await createFactura(input);
+      if (proformaId) await linkInvoiceToProforma({ invoiceId: id, proformaId });
       // Fraccionamiento del cobro/pago: cada plazo nace como línea de caja prevista
       // (sin confirmar) vinculada a la factura — Emitida → ingresos; Recibida → pagos.
       for (const v of vencimientos) {
@@ -1755,6 +1923,7 @@ function FacturaEditor({
       queryClient.invalidateQueries({ queryKey: ["facturacion"] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["cashflow"] });
+      queryClient.invalidateQueries({ queryKey: ["proformas"] });
       onClose();
     },
     onError: (err) => toast.error("Error al guardar", { description: describe(err) }),
@@ -1878,6 +2047,14 @@ function FacturaEditor({
       dynamicsNumber: nn(f.dynamicsNumber),
       notes: nn(f.notes),
       documentPath: f.documentPath,
+      // Conceptos: siempre lista completa (reemplaza); filas incompletas se descartan.
+      items: conceptos
+        .filter((c) => c.description.trim() !== "")
+        .map((c) => ({
+          description: c.description.trim(),
+          quantity: toNumN(c.quantity) ?? 1,
+          unitPrice: toNumN(c.unitPrice) ?? 0,
+        })),
     };
     // Verify is a separate one-way action; only fire it on edit when newly toggled on.
     const verify = !!item && f.verified && !item.verified;
@@ -1885,6 +2062,7 @@ function FacturaEditor({
       input,
       verify,
       vencimientos: item ? [] : plazos.map((p) => ({ date: p.date, amount: toNumN(p.amount) ?? 0, percentage: toNumN(p.percent) })),
+      proformaId: f.proformaId,
     });
   };
 
@@ -1892,12 +2070,12 @@ function FacturaEditor({
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => (!o ? onClose() : undefined)}>
-      <DialogContent className="!max-w-md sm:!max-w-3xl">
+      <DialogContent className="!max-w-md sm:!max-w-5xl">
         <form onSubmit={onSubmit}>
           <DialogHeader>
             <DialogTitle>{item ? "Editar factura" : "Nueva factura"}</DialogTitle>
           </DialogHeader>
-          <DialogBody className="space-y-5">
+          <DialogBody className="max-h-[72vh] space-y-5 overflow-y-auto">
             {!item && (
               <div>
                 <div
@@ -2021,7 +2199,7 @@ function FacturaEditor({
             )}
 
             {/* 2 columnas en móvil, 3 en escritorio */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Field id="fa-type" label="Tipo" required hint={item ? "El tipo no se puede cambiar." : undefined}>
                 <Combobox
                   id="fa-type"
@@ -2041,6 +2219,20 @@ function FacturaEditor({
               </Field>
               <Field id="fa-dyn" label="Nº Dynamics">
                 <Input id="fa-dyn" value={f.dynamicsNumber} onChange={(e) => set("dynamicsNumber", e.target.value)} placeholder="Opcional" maxLength={128} />
+              </Field>
+              <Field id="fa-status" label="Estado">
+                <Combobox
+                  id="fa-status"
+                  label="Estado"
+                  variant="field"
+                  value={f.statusId}
+                  onChange={(v) => set("statusId", v)}
+                  options={toOptions(statusesQ.data?.items)}
+                  searchable
+                  clearable
+                  placeholder={statusesQ.isLoading ? "Cargando…" : "Sin asignar"}
+                  emptyOptionLabel="Sin asignar"
+                />
               </Field>
 
               {f.type === "Emitida" ? (
@@ -2116,6 +2308,22 @@ function FacturaEditor({
                   emptyOptionLabel="Sin asignar"
                 />
               </Field>
+              <Field id="fa-proforma" label="Proforma" hint="Vinculación manual (opcional).">
+                <Combobox
+                  id="fa-proforma"
+                  label="Proforma"
+                  variant="field"
+                  value={f.proformaId}
+                  onChange={(v) => set("proformaId", v)}
+                  options={(proformasQ.data?.items ?? [])
+                    .filter((p) => p.type === f.type)
+                    .map((p) => ({ value: p.id, label: p.number, hint: fmtMoney(p.total) }))}
+                  searchable
+                  clearable
+                  placeholder={proformasQ.isLoading ? "Cargando…" : "Sin vincular"}
+                  emptyOptionLabel="Sin vincular"
+                />
+              </Field>
 
               <Field id="fa-base" label="Base imponible">
                 <Input id="fa-base" type="number" step="0.01" value={f.taxBase} onChange={(e) => setAmount("taxBase", e.target.value)} placeholder="0.00" />
@@ -2146,21 +2354,6 @@ function FacturaEditor({
               <Field id="fa-due" label="Vencimiento">
                 <Input id="fa-due" type="date" value={f.dueDate} onChange={(e) => set("dueDate", e.target.value)} />
               </Field>
-              <Field id="fa-status" label="Estado">
-                <Combobox
-                  id="fa-status"
-                  label="Estado"
-                  variant="field"
-                  value={f.statusId}
-                  onChange={(v) => set("statusId", v)}
-                  options={toOptions(statusesQ.data?.items)}
-                  searchable
-                  clearable
-                  placeholder={statusesQ.isLoading ? "Cargando…" : "Sin asignar"}
-                  emptyOptionLabel="Sin asignar"
-                />
-              </Field>
-
               <Field id="fa-terms" label="Forma de pago">
                 <Input id="fa-terms" value={f.paymentTerms} onChange={(e) => set("paymentTerms", e.target.value)} placeholder="Opcional" maxLength={256} />
               </Field>
@@ -2169,7 +2362,11 @@ function FacturaEditor({
                   <Input id="fa-bank" value={f.bank} onChange={(e) => set("bank", e.target.value)} placeholder="Opcional" maxLength={256} />
                 </Field>
               )}
-              <Field id="fa-notes" label="Notas" className={f.type === "Recibida" ? "" : "col-span-2"}>
+              <Field
+                id="fa-notes"
+                label="Notas"
+                className={f.type === "Recibida" ? "col-span-2 sm:col-span-4" : "col-span-2 sm:col-span-1"}
+              >
                 <Input id="fa-notes" value={f.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Opcional" maxLength={1024} />
               </Field>
             </div>
@@ -2269,6 +2466,92 @@ function FacturaEditor({
               <VencimientosSection item={item} onManage={onVencimientos ? () => onVencimientos(item) : undefined} />
             )}
 
+            {/* ── Conceptos: detalle presentable del PDF (opcional; los importes fiscales siguen arriba) ── */}
+            <div className="space-y-3 rounded-lg border border-[var(--color-border)] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                  Conceptos (PDF)
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={vfRegistered}
+                  onClick={() => setConceptos((cs) => [...cs, { description: "", quantity: "1", unitPrice: "" }])}
+                  className="h-8 rounded-lg px-3 text-[12.5px]"
+                >
+                  Añadir concepto
+                </Button>
+              </div>
+              {conceptos.length === 0 ? (
+                <p className="text-[12px] text-[var(--color-muted-foreground)]">
+                  Sin conceptos: el PDF muestra solo base, IVA y total.
+                </p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_32px] items-center gap-2 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                    <span>Descripción</span>
+                    <span>Cantidad</span>
+                    <span>Precio</span>
+                    <span className="text-right">Importe</span>
+                    <span />
+                  </div>
+                  {conceptos.map((c, i) => {
+                    const q = toNumN(c.quantity);
+                    const p = toNumN(c.unitPrice);
+                    const amount = q != null && p != null ? Math.round(q * p * 100) / 100 : null;
+                    return (
+                      <div key={i} className="grid grid-cols-[minmax(0,3fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_32px] items-center gap-2">
+                        <Input
+                          value={c.description}
+                          disabled={vfRegistered}
+                          onChange={(e) => setConceptos((cs) => cs.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))}
+                          placeholder="Descripción del concepto"
+                          maxLength={512}
+                          aria-label={`Descripción del concepto ${i + 1}`}
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={c.quantity}
+                          disabled={vfRegistered}
+                          onChange={(e) => setConceptos((cs) => cs.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)))}
+                          aria-label={`Cantidad del concepto ${i + 1}`}
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={c.unitPrice}
+                          disabled={vfRegistered}
+                          onChange={(e) => setConceptos((cs) => cs.map((x, j) => (j === i ? { ...x, unitPrice: e.target.value } : x)))}
+                          placeholder="0.00"
+                          aria-label={`Precio unitario del concepto ${i + 1}`}
+                        />
+                        <span className="text-right text-[12.5px] tabular-nums text-[var(--color-muted-foreground)]">
+                          {amount != null ? amount.toFixed(2) : "—"}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Quitar concepto ${i + 1}`}
+                          disabled={vfRegistered}
+                          onClick={() => setConceptos((cs) => cs.filter((_, j) => j !== i))}
+                          className="grid size-7 cursor-pointer place-items-center rounded-md text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-destructive)] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <p className="text-right text-[12px] tabular-nums text-[var(--color-muted-foreground)]">
+                    Suma de conceptos: <strong className="text-[var(--color-foreground)]">{conceptosSum.toFixed(2)} €</strong>
+                    {toNumN(f.taxBase) != null && Math.abs(conceptosSum - (toNumN(f.taxBase) ?? 0)) > 0.01 && (
+                      <span className="ml-2 text-[var(--color-warning)]">no coincide con la base imponible</span>
+                    )}
+                  </p>
+                </>
+              )}
+            </div>
+
             <div className="flex items-center justify-between rounded-lg border border-[var(--color-border)] px-3 py-2">
               <div className="min-w-0">
                 <span className="text-[13px] text-[var(--color-foreground)]">Verificada</span>
@@ -2285,14 +2568,87 @@ function FacturaEditor({
                 aria-label="Verificada"
               />
             </div>
+
+            {/* ── VERI*FACTU (AEAT) — distinto del check "Verificada" de arriba ── */}
+            {item && item.type === "Emitida" && (
+              <div className="space-y-2 rounded-lg border border-[var(--color-border)] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="size-4 text-[var(--color-muted-foreground)]" />
+                    <span className="text-[13px] font-medium text-[var(--color-foreground)]">VERI*FACTU (AEAT)</span>
+                    {item.verifactuStatus !== "NoAplica" && (
+                      <EntityStatusBadge tone={vfTone(item.verifactuStatus)} withDot>
+                        {VF_LABEL[item.verifactuStatus].replace("VeriFactu: ", "")}
+                      </EntityStatusBadge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {item.verifactuStatus === "NoAplica" && (
+                      <Button
+                        type="button"
+                        disabled={vfIssue.isPending || !f.companyId}
+                        title={!f.companyId ? "Asigna una empresa primero — VeriFactu registra por NIF de empresa." : undefined}
+                        onClick={() => (vfArmed ? vfIssue.mutate(item.id) : setVfArmed(true))}
+                        className="h-8 gap-1.5 rounded-lg px-3 text-[12.5px]"
+                      >
+                        {vfIssue.isPending ? (
+                          <>
+                            <Loader2 className="size-3.5 animate-spin" />
+                            Emitiendo…
+                          </>
+                        ) : vfArmed ? (
+                          "Confirmar emisión"
+                        ) : (
+                          "Emitir con VeriFactu"
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {vfArmed && item.verifactuStatus === "NoAplica" && (
+                  <p className="rounded-lg border border-[oklch(from_var(--color-warning)_l_c_h_/_0.35)] bg-[oklch(from_var(--color-warning)_l_c_h_/_0.08)] px-3 py-2 text-[12.5px] text-[var(--color-foreground)]">
+                    Esta acción es <strong>irreversible</strong>: la factura quedará registrada en la cadena
+                    VERI*FACTU y ya no podrá editarse ni borrarse. Corregirla exigirá una rectificativa.
+                    Guarda cualquier cambio pendiente antes. Pulsa otra vez para confirmar.
+                  </p>
+                )}
+                {vfRegistered && (
+                  <p className="text-[12px] text-[var(--color-muted-foreground)]">
+                    Factura registrada ante la AEAT — inmutable. Los campos no se pueden guardar ni la
+                    factura borrarse; para corregirla, emite una rectificativa (próximamente).
+                  </p>
+                )}
+                {item.verifactuStatus === "Rechazada" && (
+                  <p className="rounded-lg border border-[oklch(from_var(--color-destructive)_l_c_h_/_0.30)] bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.06)] px-3 py-2 text-[12.5px] text-[var(--color-destructive)]">
+                    La AEAT rechazó el registro — la factura sigue siendo editable; corrígela y vuelve a intentarlo.
+                  </p>
+                )}
+              </div>
+            )}
           </DialogBody>
           <DialogFooter>
+            {item && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pdf.isPending}
+                onClick={() => pdf.mutate({ id: item.id, number: item.number })}
+                className="mr-auto gap-1.5"
+              >
+                <Printer className="size-3.5" />
+                {pdf.isPending ? "Generando…" : "Descargar PDF"}
+              </Button>
+            )}
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={save.isPending}>
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={save.isPending || !canSave}>
+            <Button
+              type="submit"
+              disabled={save.isPending || !canSave || vfRegistered}
+              title={vfRegistered ? "Registrada en VERI*FACTU — inmutable." : undefined}
+            >
               {save.isPending ? "Guardando…" : item ? "Guardar" : "Crear"}
             </Button>
           </DialogFooter>

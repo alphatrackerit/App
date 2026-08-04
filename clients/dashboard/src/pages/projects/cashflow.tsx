@@ -354,6 +354,34 @@ export function FlujoDeCajaPage() {
               </tr>
             </thead>
             <tbody>
+              {/* Saldo de apertura de cada mes (= caja al cierre del mes anterior); enero cruza al año previo. */}
+              <tr>
+                <td className={dayTd + " z-30 !font-semibold !text-[var(--color-foreground)]"} style={{ top: 60 }}>
+                  Caja mes ant.
+                </td>
+                {MONTH_NUMS.map((m) => {
+                  const prevMonthEnd =
+                    m === 1
+                      ? (year - 1) * 10000 + 12 * 100 + 31
+                      : year * 10000 + (m - 1) * 100 + daysInMonth(year, m - 1);
+                  const opening = accAsOf(prevMonthEnd);
+                  return (
+                    <Fragment key={m}>
+                      <td className="sticky z-10 border border-[var(--color-border)] bg-[var(--color-card)]" style={{ top: 60 }} />
+                      <td className="sticky z-10 border border-[var(--color-border)] bg-[var(--color-card)]" style={{ top: 60 }} />
+                      <td
+                        style={{ top: 60, width: 108 }}
+                        className={
+                          "sticky z-10 border border-[var(--color-border)] px-2 py-1 text-right text-[12px] font-semibold tabular-nums bg-[color-mix(in_oklab,var(--color-muted)_35%,var(--color-card))] " +
+                          (opening != null && opening < 0 ? "text-[var(--color-destructive)]" : "text-[var(--color-foreground)]")
+                        }
+                      >
+                        {opening != null ? money(opening) : ""}
+                      </td>
+                    </Fragment>
+                  );
+                })}
+              </tr>
               {DAYS.map((d) => (
                 <tr key={d}>
                   <td className={dayTd}>{d}</td>

@@ -281,7 +281,14 @@ public class EndpointConventionTests
                                name.StartsWith("Pin", StringComparison.Ordinal) ||
                                name.StartsWith("Unpin", StringComparison.Ordinal) ||
                                name.StartsWith("Link", StringComparison.Ordinal) ||
-                               name.StartsWith("Unlink", StringComparison.Ordinal);
+                               name.StartsWith("Unlink", StringComparison.Ordinal) ||
+                               name.StartsWith("Attach", StringComparison.Ordinal) ||
+                               name.StartsWith("Extract", StringComparison.Ordinal) ||
+                               name.StartsWith("Apply", StringComparison.Ordinal) ||
+                               // Avicola uses Spanish action verbs — the module's ubiquitous language.
+                               name.StartsWith("Completar", StringComparison.Ordinal) ||
+                               name.StartsWith("Cambiar", StringComparison.Ordinal) ||
+                               name.StartsWith("Cerrar", StringComparison.Ordinal);
 
                 if (!hasVerb)
                 {

@@ -25,6 +25,12 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(x => x.Total).HasColumnName("Total").IsRequired();
         builder.Property(x => x.Bank).HasColumnName("Banco");
         builder.Property(x => x.Verified).HasColumnName("Comprobada").IsRequired().HasDefaultValue(false);
+        builder.Property(x => x.VerifactuStatus)
+            .HasColumnName("VerifactuEstado")
+            .HasConversion<string>()
+            .HasMaxLength(24)
+            .IsRequired()
+            .HasDefaultValue(Contracts.Enums.VerifactuStatus.NoAplica);
         builder.Property(x => x.Notes).HasColumnName("Notas");
         builder.Property(x => x.DocumentPath).HasColumnName("Documento").HasMaxLength(512);
 
@@ -44,6 +50,23 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(x => x.SocietyId).HasColumnName("SociedadId");
         builder.Property(x => x.ProjectId).HasColumnName("ProyectoId");
         builder.Property(x => x.StatusId).HasColumnName("EstadoId");
+
+        // Conceptos: owned child rows, real FK, die with the invoice. Backing-field access so
+        // SetItems' clear+add round-trips correctly.
+        builder.HasMany(x => x.Items)
+            .WithOne()
+            .HasForeignKey(x => x.InvoiceId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Items).UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        // Proforma link — real intra-module FK (like Income/Payment → Invoice): deleting the
+        // proforma unlinks its invoices instead of losing them.
+        builder.Property(x => x.ProformaId).HasColumnName("ProformaId");
+        builder.HasOne<Proforma>()
+            .WithMany()
+            .HasForeignKey(x => x.ProformaId)
+            .OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(x => x.ProformaId);
 
         builder.HasIndex(x => x.ClientId);
         builder.HasIndex(x => x.SupplierId);

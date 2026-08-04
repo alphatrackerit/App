@@ -20,4 +20,5 @@ public sealed record UpdateInvoiceCommand(
     string? Bank = null,
     Guid? StatusId = null,
     string? DynamicsNumber = null,
-    string? Notes = null) : ICommand<Guid>;
+    string? Notes = null,
+    IReadOnlyList<InvoiceItemInput>? Items = null) : ICommand<Guid>;

@@ -2,6 +2,9 @@ using FSH.Modules.Cashflow.Contracts.Enums;
 
 namespace FSH.Modules.Cashflow.Contracts.Dtos;
 
+/// <summary>One presentational concept line of an invoice (PDF detail).</summary>
+public sealed record InvoiceItemDto(Guid Id, string Description, decimal Quantity, decimal UnitPrice, decimal Amount);
+
 public sealed record InvoiceDto(
     Guid Id,
     string Number,
@@ -23,4 +26,7 @@ public sealed record InvoiceDto(
     bool Verified,
     string? Notes,
     string? DocumentPath,
-    decimal Collected);
+    decimal Collected,
+    Guid? ProformaId,
+    VerifactuStatus VerifactuStatus,
+    IReadOnlyList<InvoiceItemDto> Items);

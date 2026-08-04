@@ -186,7 +186,86 @@ anterior del storage, best-effort). En la UI: al editar una factura sin document
 Además, las filas de Ingresos/Pagos del detalle de proyecto muestran un icono 📄 (coloreado =
 con factura vinculada, apagado = sin factura).
 
-## 13. Pendiente
+## 13. Proformas (1 proforma → N facturas) — HECHO (2026-07-31)
+
+Nuevo agregado `Proforma`, **un nivel por encima de `Invoice`**, con la misma relación de diseño
+que Invoice→Income/Payment: agregados independientes, referenciados por identidad
+(`Invoice.ProformaId`, FK real intra-módulo `ON DELETE SET NULL`), sin navegación.
+
+- **Modelo**: tabla `Proformas` (schema `cashflow`), espejo de `Facturas` — mismo check constraint
+  asimétrico (`CK_Proformas_Tipo`), mismo índice único parcial (`Numero, TenantId WHERE
+  Tipo='Emitida'`; Recibida solo lookup). Reutiliza `InvoiceType` y `PaymentTerms` tal cual.
+  Estados propios sembrados (`StatusType.ProformaEmitida/ProformaRecibida`): BORRADOR, ENVIADA,
+  ACEPTADA, RECHAZADA, FACTURADA PARCIAL, FACTURADA COMPLETA, CANCELADA. Migración `AddProformas`.
+- **Slices** (`Features/v1/Proformas/`): Search/Create/GetById/Update/Delete +
+  `GetProformaLines` (facturas vinculadas + facturado/pendiente **informativo**, nunca bloquea) +
+  `GenerateInvoicesFromProforma` + `LinkInvoiceToProforma` + `AttachProformaDocument`/
+  `GetProformaDocument` + `GetProformaPdf` (QuestPDF, sin QR — una proforma no es documento
+  fiscal y NUNCA pasa por VeriFactu).
+- **Numeración**: `Proforma.Number` texto libre (único asimétrico). Las facturas generadas se
+  numeran `{Numero}-{i}` (borrador, renumerables); el handler valida colisiones y responde 409
+  listándolas. La generación NO es idempotente a propósito (auto + manual se combinan).
+  **2026-08-03: la generación automática se RETIRÓ de la UI a petición del usuario** — el flujo
+  real es asociar facturas existentes desde el editor de factura (selector «Proforma», 1..N
+  facturas por proforma); el endpoint `GenerateInvoicesFromProforma` sigue en el backend por si
+  se reactiva.
+- **Permisos**: resource `Proformas` (View/Create/Update/Delete/GenerateInvoices).
+- **UI** (`/facturacion/proformas`): tabla con Total/Facturado/Pendiente (rojo si exceso), editor
+  (mismo patrón que facturas, con adjunto), diálogo "Facturas" = cuadre informativo + lista de
+  facturas asociadas (sin botón de generar),
+  descarga de PDF. En el editor de facturas: selector "Proforma" (vinculación manual, filtrado
+  por tipo); la vinculación viaja por `LinkInvoiceToProforma`, no por el update normal.
+
+## 14. VERI*FACTU (AEAT, RD 1007/2023 + Orden HAC/1177/2024) — Fases 0-2 HECHAS (2026-07-31)
+
+Emisión de facturas verificables para las **Emitidas** (las Recibidas quedan `NoAplica`). Por
+`Company` (no por tenant): cadena de huellas, certificado y on/off viven en `VerifactuAjustes`
+(1:1 con Empresas, FK real; certificado PFX + contraseña cifrados con DataProtection, key-ring
+Redis). `Company.Nif` nuevo campo dedicado (no reutiliza `RegistroFiscal`). `Invoice.Number`
+mapea 1:1 a `NumSerieFactura` (≤60 chars) — sin campo `Series`.
+
+- **Huella encadenada** (`VerifactuChainService`, lógica pura): SHA-256 hex mayúsculas sobre la
+  cadena `campo=valor&…` oficial — **pasa los vectores de prueba oficiales Caso 1 y 2** del doc
+  de la AEAT (v0.1.2). Primer registro: `Huella=` vacía. QR: `ValidarQR` (prewww2/www2) con
+  nif/numserie/fecha/importe URL-encoded, nivel M, "QR tributario:" + leyenda legal en el PDF
+  (`InvoiceVerifactuPdfRenderer`, QuestPDF + QRCoder).
+- **Emisión** (`POST /invoices/{id}/verifactu/issue`, permiso `Facturacion.IssueVerifactu`):
+  advisory lock por empresa, registro `VerifactuRegistros` + avance de cadena en la misma
+  transacción; **irreversible** — `Invoice.Update`/Delete lanzan 409 si el estado es
+  PendienteEnvio/Enviada/Aceptada/AceptadaConErrores (Rechazada sigue editable). Rectificativas:
+  trabajo futuro (tipos R1-R5, TipoRectificativa S/I, registro de anulación — ver doc AEAT).
+- **Envío SOAP** (`AeatVerifactuClient`): `RegFactuSistemaFacturacion`, mTLS por empresa (PFX en
+  memoria), endpoints oficiales pruebas/producción; ⚠️ el XML debe contrastarse end-to-end contra
+  preproducción AEAT con certificado real antes de activar producción (plan §21).
+- **Jobs**: `SubmitVerifactuRecordsJob` (batch por empresa ≤1000, programado +60 s tras emitir —
+  control de flujo AEAT; `[AutomaticRetry(5)]`) y `VerifactuSweepJob` (recurrente horario,
+  `cashflow:verifactu-sweep`) que reencola PendienteEnvio/ErrorTecnico por tenant/empresa.
+- **API/UI**: `InvoiceDto.VerifactuStatus` + filtro `verifactuStatus` en búsqueda; página
+  `/facturacion/verifactu` (ajustes por empresa, NIF, certificado, entorno, cadena); en facturas:
+  punto de estado junto al número, banda de incidencias (Rechazada/ErrorTecnico), sección
+  VeriFactu del editor (emitir con confirmación de dos pasos, PDF con QR, bloqueo de guardado).
+  "VeriFactu" ≠ check interno "Verificada" — términos y badges separados a propósito.
+- Migraciones: `AddVerifactu` (Nif, VerifactuEstado, VerifactuAjustes, VerifactuRegistros).
+
+## 15. Factura presentable (PDF con identidad de empresa) — HECHO (2026-08-01)
+
+- **Empresa** ampliada: `Direccion`, `CodigoPostal`, `Ciudad`, `Telefono`, `Email`, `Logo`
+  (subida `POST /companies/{id}/logo`, imagen ≤1 MB, editable en `/admin/empresas`; el NIF y estos
+  campos alimentan la cabecera del PDF).
+- **Conceptos** (`FacturaConceptos`, hijo del agregado Invoice): descripción, cantidad, precio,
+  importe derivado — detalle presentable del PDF; los importes fiscales siguen siendo
+  base/IVA/total de la cabecera. Editables en el editor de facturas ("Conceptos (PDF)", con aviso
+  si la suma no cuadra con la base imponible); bloqueados si la factura está registrada en
+  VeriFactu (misma inmutabilidad).
+- **PDF unificado** `GET /invoices/{id}/pdf` (endpoint "GetCashflowInvoicePdf" — "GetInvoicePdf"
+  es de Billing): logo + bloques emisor/cliente (NIF y dirección) + tabla de conceptos + totales;
+  si la factura está registrada en VeriFactu añade automáticamente el QR tributario + leyenda +
+  huella. Sustituye a `/verifactu/pdf`. Botón "Descargar PDF" en el editor (todas las facturas).
+- Migración: `AddInvoicePresentation`. Nota infra: NU1902/NU1903 pasan a warnings no bloqueantes
+  (`WarningsNotAsErrors` en `src/Directory.Build.props`) + pin transitivo `MessagePack 2.5.301` —
+  desbloquea `iniciar.bat`/CI tras la ola de advisories.
+
+## 16. Pendiente
 
 1. Vinculación manual del resto (~2.000 facturas sin match inequívoco) — diálogo 🔗 por factura.
 2. Revisar los 242 clientes/proveedores `IMPORT` (fusionar variantes de nombre con los existentes).

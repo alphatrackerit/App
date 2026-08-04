@@ -199,21 +199,56 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Address")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("Direccion");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("Ciudad");
+
                     b.Property<string>("Code")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
                         .HasColumnName("Codigo");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("Email");
 
                     b.Property<string>("LegalName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("RazonSocial");
 
+                    b.Property<string>("LogoPath")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("Logo");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("Nombre");
+
+                    b.Property<string>("Nif")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("Nif");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("Telefono");
+
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("CodigoPostal");
 
                     b.Property<bool>("ShowInProjects")
                         .ValueGeneratedOnAdd()
@@ -386,6 +421,10 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                         .HasColumnType("character varying(32)")
                         .HasColumnName("FormaPago");
 
+                    b.Property<Guid?>("ProformaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ProformaId");
+
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid")
                         .HasColumnName("ProyectoId");
@@ -424,6 +463,14 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                         .HasColumnType("numeric")
                         .HasColumnName("Iva");
 
+                    b.Property<string>("VerifactuStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasDefaultValue("NoAplica")
+                        .HasColumnName("VerifactuEstado");
+
                     b.Property<bool>("Verified")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -435,6 +482,8 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                     b.HasIndex("ClientId");
 
                     b.HasIndex("CompanyId");
+
+                    b.HasIndex("ProformaId");
 
                     b.HasIndex("ProjectId");
 
@@ -456,6 +505,127 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                         {
                             t.HasCheckConstraint("CK_Facturas_Tipo", "(\"Tipo\" = 'Emitida' AND \"ClienteId\" IS NOT NULL) OR (\"Tipo\" = 'Recibida' AND \"ProveedorId\" IS NOT NULL)");
                         });
+
+                    b.HasAnnotation("Finbuckle:MultiTenant", true);
+                });
+
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.InvoiceItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("Importe");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("Descripcion");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("FacturaId");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("Orden");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric")
+                        .HasColumnName("Cantidad");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("numeric")
+                        .HasColumnName("PrecioUnitario");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.ToTable("FacturaConceptos", "cashflow");
+
+                    b.HasAnnotation("Finbuckle:MultiTenant", true);
+                });
+
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.InvoiceVerifactuRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AeatResponseCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("CodigoRespuestaAeat");
+
+                    b.Property<DateTimeOffset>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("FechaGeneracion");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("Huella");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("FacturaId");
+
+                    b.Property<string>("PreviousHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("HuellaAnterior");
+
+                    b.Property<string>("QrPayload")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("QrPayload");
+
+                    b.Property<string>("RawRequestXml")
+                        .HasColumnType("text")
+                        .HasColumnName("PeticionXml");
+
+                    b.Property<string>("RawResponseXml")
+                        .HasColumnType("text")
+                        .HasColumnName("RespuestaXml");
+
+                    b.Property<int>("RetryCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("Reintentos");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("Estado");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_VerifactuRegistros_FacturaId1");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("InvoiceId", "TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_VerifactuRegistros_FacturaId");
+
+                    b.ToTable("VerifactuRegistros", "cashflow");
 
                     b.HasAnnotation("Finbuckle:MultiTenant", true);
                 });
@@ -613,6 +783,116 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                     b.HasIndex("Type");
 
                     b.ToTable("Prefijos", "cashflow");
+
+                    b.HasAnnotation("Finbuckle:MultiTenant", true);
+                });
+
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.Proforma", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ClienteId");
+
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("EmpresaId");
+
+                    b.Property<DateTime?>("Date")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("Fecha");
+
+                    b.Property<string>("DocumentPath")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("Documento");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("Notas");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Numero");
+
+                    b.Property<string>("PaymentTerms")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("FormaPago");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ProyectoId");
+
+                    b.Property<string>("Responsible")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("Responsable");
+
+                    b.Property<Guid?>("SocietyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("SociedadId");
+
+                    b.Property<Guid?>("StatusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("EstadoId");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ProveedorId");
+
+                    b.Property<decimal?>("TaxBase")
+                        .HasColumnType("numeric")
+                        .HasColumnName("BaseImponible");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("numeric")
+                        .HasColumnName("Total");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("Tipo");
+
+                    b.Property<decimal?>("Vat")
+                        .HasColumnType("numeric")
+                        .HasColumnName("Iva");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("SocietyId");
+
+                    b.HasIndex("StatusId");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("Number", "TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Proformas_Numero_Emitida")
+                        .HasFilter("\"Tipo\" = 'Emitida'");
+
+                    b.HasIndex("Number", "Type")
+                        .HasDatabaseName("IX_Proformas_Numero_Tipo");
+
+                    b.ToTable("Proformas", "cashflow", t =>
+                        {
+                            t.HasCheckConstraint("CK_Proformas_Tipo", "(\"Tipo\" = 'Emitida' AND \"ClienteId\" IS NOT NULL) OR (\"Tipo\" = 'Recibida' AND \"ProveedorId\" IS NOT NULL)");
+                        });
 
                     b.HasAnnotation("Finbuckle:MultiTenant", true);
                 });
@@ -871,6 +1151,86 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                     b.HasAnnotation("Finbuckle:MultiTenant", true);
                 });
 
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.VerifactuSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("EmpresaId");
+
+                    b.Property<bool>("Enabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("Activo");
+
+                    b.Property<byte[]>("EncryptedCertificate")
+                        .HasColumnType("bytea")
+                        .HasColumnName("CertificadoCifrado");
+
+                    b.Property<string>("EncryptedCertificatePassword")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("PasswordCertificadoCifrado");
+
+                    b.Property<string>("Environment")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("Entorno");
+
+                    b.Property<string>("InstallationNumber")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("NumeroInstalacion");
+
+                    b.Property<DateTimeOffset?>("LastChainAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("UltimaHuellaFecha");
+
+                    b.Property<string>("LastChainHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("UltimaHuella");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("SoftwareName")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("NombreSoftware");
+
+                    b.Property<string>("SoftwareVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("VersionSoftware");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_VerifactuAjustes_EmpresaId1");
+
+                    b.HasIndex("CompanyId", "TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_VerifactuAjustes_EmpresaId");
+
+                    b.ToTable("VerifactuAjustes", "cashflow");
+
+                    b.HasAnnotation("Finbuckle:MultiTenant", true);
+                });
+
             modelBuilder.Entity("FSH.Modules.Cashflow.Domain.Income", b =>
                 {
                     b.HasOne("FSH.Modules.Cashflow.Domain.Invoice", null)
@@ -882,6 +1242,32 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                         .WithMany()
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.Invoice", b =>
+                {
+                    b.HasOne("FSH.Modules.Cashflow.Domain.Proforma", null)
+                        .WithMany()
+                        .HasForeignKey("ProformaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.InvoiceItem", b =>
+                {
+                    b.HasOne("FSH.Modules.Cashflow.Domain.Invoice", null)
+                        .WithMany("Items")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.InvoiceVerifactuRecord", b =>
+                {
+                    b.HasOne("FSH.Modules.Cashflow.Domain.Invoice", null)
+                        .WithOne()
+                        .HasForeignKey("FSH.Modules.Cashflow.Domain.InvoiceVerifactuRecord", "InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FSH.Modules.Cashflow.Domain.Note", b =>
@@ -919,6 +1305,20 @@ namespace FSH.Starter.Migrations.PostgreSQL.Cashflow
                         .WithMany()
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.VerifactuSettings", b =>
+                {
+                    b.HasOne("FSH.Modules.Cashflow.Domain.Company", null)
+                        .WithOne()
+                        .HasForeignKey("FSH.Modules.Cashflow.Domain.VerifactuSettings", "CompanyId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FSH.Modules.Cashflow.Domain.Invoice", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

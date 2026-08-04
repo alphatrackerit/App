@@ -16,6 +16,7 @@ public sealed class UpdateInvoiceCommandHandler(CashflowDbContext dbContext)
         ArgumentNullException.ThrowIfNull(command);
 
         var invoice = await dbContext.Invoices
+            .Include(i => i.Items)
             .FirstOrDefaultAsync(i => i.Id == command.InvoiceId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException($"Invoice {command.InvoiceId} not found.");
@@ -37,6 +38,12 @@ public sealed class UpdateInvoiceCommandHandler(CashflowDbContext dbContext)
             command.ClientId, command.SupplierId, command.CompanyId, command.SocietyId,
             command.TaxBase, command.Vat, command.PaymentTerms, command.Bank, command.StatusId,
             command.DynamicsNumber, command.Notes, command.ProjectId);
+
+        // Null = leave the concept lines untouched; a list (even empty) replaces them.
+        if (command.Items is not null)
+        {
+            invoice.SetItems(command.Items.Select(i => (i.Description, i.Quantity, i.UnitPrice)));
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return invoice.Id;

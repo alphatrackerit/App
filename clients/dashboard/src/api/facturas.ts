@@ -1,4 +1,6 @@
-import { apiFetch } from "@/lib/api-client";
+import { ApiRequestError, apiFetch } from "@/lib/api-client";
+import { tokenStore } from "@/auth/token-store";
+import { env } from "@/env";
 import type { PagedResponse } from "@/api/projects";
 
 // ───────────────────────────────────────────────────────────────────────
@@ -31,6 +33,27 @@ export type FacturaDto = {
   documentPath: string | null;
   /** Cobrado (emitida) / pagado (recibida): suma de líneas validadas vinculadas. */
   collected: number;
+  /** Proforma de la que procede / a la que está vinculada (trazabilidad, opcional). */
+  proformaId: string | null;
+  /** Estado VERI*FACTU (AEAT). No confundir con el check interno `verified` ("Verificada"). */
+  verifactuStatus: import("@/api/verifactu").VerifactuStatus;
+  /** Conceptos (detalle presentable del PDF). Vacío en la búsqueda; completo en el detalle. */
+  items: FacturaItemDto[];
+};
+
+/** Un concepto de la factura. `amount` lo deriva el servidor (cantidad × precio). */
+export type FacturaItemDto = {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+};
+
+export type FacturaItemInput = {
+  description: string;
+  quantity: number;
+  unitPrice: number;
 };
 
 // The list/detail shape is identical — alias for readability at call sites.
@@ -56,6 +79,8 @@ export type FacturaInput = {
   dynamicsNumber?: string | null;
   notes?: string | null;
   documentPath?: string | null;
+  /** Conceptos: null/omitido = no tocar; lista (incluso vacía) = reemplazar. */
+  items?: FacturaItemInput[] | null;
 };
 
 // A cash-flow line (income/payment) linked to an invoice.
@@ -96,6 +121,7 @@ export type SearchFacturasParams = {
   supplierId?: string;
   companyId?: string;
   projectId?: string;
+  verifactuStatus?: import("@/api/verifactu").VerifactuStatus;
 };
 
 function invoiceQuery(params: Record<string, string | number | undefined | null>): string {
@@ -189,6 +215,44 @@ export function generateMilestones(id: string, projectId?: string | null): Promi
     method: "POST",
     body: JSON.stringify({ projectId: projectId ?? null }),
   });
+}
+
+/**
+ * Descarga el PDF presentable de la factura (con QR + leyenda AEAT si está registrada en
+ * VeriFactu). apiFetch solo devuelve JSON, así que pedimos el blob directamente con los mismos
+ * headers de auth + tenant.
+ */
+export async function downloadFacturaPdf(invoiceId: string, invoiceNumber: string): Promise<void> {
+  const accessToken = tokenStore.getAccessToken();
+  if (!accessToken) {
+    throw new ApiRequestError(401, "Not signed in");
+  }
+
+  const headers = new Headers({ Authorization: `Bearer ${accessToken}` });
+  const tenant = tokenStore.getTenant() ?? env.defaultTenant;
+  if (tenant) headers.set("tenant", tenant);
+
+  const response = await fetch(
+    `${env.apiBase}/api/v1/cashflow/invoices/${encodeURIComponent(invoiceId)}/pdf`,
+    { headers },
+  );
+
+  if (!response.ok) {
+    throw new ApiRequestError(response.status, `No se pudo descargar el PDF (${response.status})`);
+  }
+
+  const blob = await response.blob();
+  const objectUrl = window.URL.createObjectURL(blob);
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = `factura-${invoiceNumber}.pdf`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  } finally {
+    window.URL.revokeObjectURL(objectUrl);
+  }
 }
 
 export async function verifyFactura(id: string): Promise<void> {

@@ -15,5 +15,11 @@ public sealed class UpdateInvoiceCommandValidator : AbstractValidator<UpdateInvo
             .Must(pt => PaymentTerms.TryParse(pt, out _))
             .When(x => !string.IsNullOrWhiteSpace(x.PaymentTerms))
             .WithMessage("Unrecognized payment-terms code.");
+
+        RuleForEach(x => x.Items).ChildRules(item =>
+        {
+            item.RuleFor(i => i.Description).NotEmpty().MaximumLength(512);
+            item.RuleFor(i => i.Quantity).GreaterThan(0);
+        }).When(x => x.Items is not null);
     }
 }

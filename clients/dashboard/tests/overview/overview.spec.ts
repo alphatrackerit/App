@@ -162,11 +162,12 @@ test.describe("invoices (/invoices)", () => {
     // Header reflects the TRUE total, not the loaded page size.
     await expect(page.getByText(/showing 1 of 2 invoices/i)).toBeVisible();
     await expect(page.getByText("INV-2026-05").last()).toBeVisible();
-    await expect(page.getByText("Page 1 of 2", { exact: true })).toBeVisible();
+    // EntityPager caption is Spanish (español-de-España UI rule).
+    await expect(page.getByText("Página 1 de 2", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: /next page/i }).click();
 
     await expect(page.getByText("INV-2026-04").last()).toBeVisible();
-    await expect(page.getByText("Page 2 of 2", { exact: true })).toBeVisible();
+    await expect(page.getByText("Página 2 de 2", { exact: true })).toBeVisible();
   });
 });

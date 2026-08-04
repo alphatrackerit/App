@@ -25,6 +25,11 @@ public sealed class CashflowDbContext : BaseDbContext
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Note> Notes => Set<Note>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<Proforma> Proformas => Set<Proforma>();
+
+    // VERI*FACTU (AEAT) — per-company chain settings + per-invoice billing records
+    public DbSet<VerifactuSettings> VerifactuSettings => Set<VerifactuSettings>();
+    public DbSet<InvoiceVerifactuRecord> InvoiceVerifactuRecords => Set<InvoiceVerifactuRecord>();
 
     // Catalog master-data (consolidated from the former Administration module)
     public DbSet<Client> Clients => Set<Client>();

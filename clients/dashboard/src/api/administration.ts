@@ -108,10 +108,42 @@ export type ClientRow = Lookup & PartyFields & { clientType: string | null };
 export type ClientInput = LookupInput & PartyInputFields & { clientType?: string | null };
 export const clientCatalog = richCatalog<ClientRow, ClientInput>("/clients");
 
-// Company — legal entity (billing party).
-export type CompanyRow = Lookup & { legalName: string | null; taxRegistration: string | null; showInProjects: boolean };
-export type CompanyInput = LookupInput & { legalName?: string | null; taxRegistration?: string | null; showInProjects?: boolean };
+// Company — legal entity (billing party). `nif` is the AEAT tax id used by VeriFactu; the
+// address/contact/logo fields feed the presentable invoice PDF header.
+export type CompanyRow = Lookup & {
+  legalName: string | null;
+  taxRegistration: string | null;
+  showInProjects: boolean;
+  nif: string | null;
+  address: string | null;
+  postalCode: string | null;
+  city: string | null;
+  phone: string | null;
+  email: string | null;
+  logoPath: string | null;
+};
+export type CompanyInput = LookupInput & {
+  legalName?: string | null;
+  taxRegistration?: string | null;
+  showInProjects?: boolean;
+  nif?: string | null;
+  address?: string | null;
+  postalCode?: string | null;
+  city?: string | null;
+  phone?: string | null;
+  email?: string | null;
+};
 export const companyCatalog = richCatalog<CompanyRow, CompanyInput>("/companies");
+
+/** Sube o reemplaza el logo de la empresa (imagen ≤1 MB) usado en el PDF de las facturas. */
+export async function uploadCompanyLogo(companyId: string, file: File): Promise<{ logoPath: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  return apiFetch<{ logoPath: string }>(`/api/v1/cashflow/companies/${encodeURIComponent(companyId)}/logo`, {
+    method: "POST",
+    body: form,
+  });
+}
 
 // Country — name + ISO code + description.
 export type CountryRow = Lookup & { description: string | null };

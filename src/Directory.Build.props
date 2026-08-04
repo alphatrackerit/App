@@ -14,6 +14,12 @@
 		     let analyzer regressions slip through to CI. -->
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+		<!-- NuGet audit findings (NU1902 moderate / NU1903 high) surface as WARNINGS, not
+		     errors: fresh advisories on transitive framework packages (e.g. the 2026-08 wave on
+		     System.Security.Cryptography.Xml 10.0.8, Microsoft.OpenApi 2.0.0) would otherwise
+		     brick every build/CI/stack start until upstream patches exist. Patchable ones get a
+		     transitive pin in Directory.Packages.props instead (see MessagePack 2.5.301). -->
+		<WarningsNotAsErrors>$(WarningsNotAsErrors);NU1902;NU1903</WarningsNotAsErrors>
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 		<AnalysisLevel>latest</AnalysisLevel>
 		<AnalysisMode>AllEnabledByDefault</AnalysisMode>

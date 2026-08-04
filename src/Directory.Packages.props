@@ -32,6 +32,10 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.15.0-beta.1" />
+    <!-- Transitive pin (via SignalR.StackExchangeRedis): 2.5.187 is flagged by NuGet audit
+         (CVE-2026-48109 LZ4 OOB-read + related advisories); patched in 2.5.301. -->
+    <PackageVersion Include="MessagePack" Version="2.5.301" />
+    <PackageVersion Include="QRCoder" Version="1.6.0" />
     <PackageVersion Include="QuestPDF" Version="2026.5.0" />
     <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
     <PackageVersion Include="Serilog.Enrichers.Process" Version="3.0.0" />
