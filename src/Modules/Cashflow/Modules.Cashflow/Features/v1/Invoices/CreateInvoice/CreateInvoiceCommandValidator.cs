@@ -9,7 +9,10 @@ public sealed class CreateInvoiceCommandValidator : AbstractValidator<CreateInvo
 {
     public CreateInvoiceCommandValidator()
     {
-        RuleFor(x => x.Number).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.Number).NotEmpty()
+            .When(x => x.Type == InvoiceType.Emitida)
+            .WithMessage("El número es obligatorio en facturas emitidas.");
+        RuleFor(x => x.Number).MaximumLength(64);
 
         RuleFor(x => x.ClientId).NotNull()
             .When(x => x.Type == InvoiceType.Emitida)

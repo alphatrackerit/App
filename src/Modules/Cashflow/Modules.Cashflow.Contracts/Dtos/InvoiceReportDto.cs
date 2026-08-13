@@ -19,7 +19,7 @@ public enum InvoiceReportStatus
 /// collected (validated linked) vs pending amounts computed.</summary>
 public sealed record InvoiceReportRowDto(
     Guid Id,
-    string Number,
+    string? Number,
     InvoiceType Type,
     string? CounterpartyName,
     string? CompanyName,

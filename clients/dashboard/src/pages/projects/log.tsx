@@ -16,7 +16,8 @@ import {
   EntityPager,
   EntitySearch,
   EntityStatusBadge,
-  useTableControls,
+  useTableState,
+  useTableRows,
 } from "@/components/list";
 import { describe, formatDate } from "@/lib/list-helpers";
 
@@ -186,28 +187,31 @@ function RowDetail({ row, names }: { row: LogRow; names: NameIndex }) {
 export function LogPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  // Sort/filtro por columna + paginación. Al ordenar o filtrar la consulta se
+  // ensancha, pero solo hasta DETAIL_PREFETCH_LIMIT: Entidad/Operación/Registro
+  // salen de una petición de detalle por fila, así que traer el log entero
+  // dejaría esas tres columnas vacías (y sin nada que ordenar).
+  const ctl = useTableState({ pageSize: PAGE_SIZE, fullPageSize: DETAIL_PREFETCH_LIMIT });
+  const { setPage } = ctl;
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search.trim());
-      setPageNumber(1);
+      setPage(1);
     }, 250);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, setPage]);
 
   // Solo cambios de entidades del módulo Cashflow (proyectos + administración), de todos los usuarios.
   const q = useQuery({
-    queryKey: ["audits", "cashflow-log", { search: debouncedSearch, pageNumber, pageSize }],
+    queryKey: ["audits", "cashflow-log", { search: debouncedSearch, ...ctl.fetch }],
     queryFn: () =>
       listAudits({
         eventType: "EntityChange",
         source: "CashflowDbContext",
         search: debouncedSearch || undefined,
-        pageNumber,
-        pageSize,
+        ...ctl.fetch,
       }),
     placeholderData: keepPreviousData,
   });
@@ -237,14 +241,19 @@ export function LogPage() {
     [summaries, detailById],
   );
 
-  const ctl = useTableControls<LogRow>(rows, {
-    fecha: (r) => r.occurredAtUtc,
-    usuario: (r) => r.userName || r.userId || "Sistema",
-    entidad: (r) => r.payload?.table ?? null,
-    operacion: (r) => (r.payload ? (OPERATIONS[r.payload.operation]?.label ?? r.payload.operation) : null),
-    registro: (r) => (r.payload ? recordLabel(r.payload, names) || r.payload.key : null),
-  });
-  const items = ctl.rows;
+  const view = useTableRows<LogRow>(
+    rows,
+    {
+      fecha: (r) => r.occurredAtUtc,
+      usuario: (r) => r.userName || r.userId || "Sistema",
+      entidad: (r) => r.payload?.table ?? null,
+      operacion: (r) => (r.payload ? (OPERATIONS[r.payload.operation]?.label ?? r.payload.operation) : null),
+      registro: (r) => (r.payload ? recordLabel(r.payload, names) || r.payload.key : null),
+    },
+    ctl,
+    data,
+  );
+  const items = view.rows;
   const searchActive = debouncedSearch.length > 0;
 
   return (
@@ -252,7 +261,7 @@ export function LogPage() {
       <EntityPageHeader
         icon={ScrollText}
         title="Log de cambios"
-        total={data?.totalCount ?? null}
+        total={view.totalCount}
         unit="cambio"
         description="Altas, modificaciones y borrados de Proyectos y Administración, de todos los usuarios. Ordena y filtra por columna, o usa la búsqueda global (rastrea también el contenido del cambio)."
       />
@@ -335,17 +344,14 @@ export function LogPage() {
           </EntityListCard>
 
           <EntityPager
-            page={data?.pageNumber ?? 1}
-            totalPages={data?.totalPages ?? 1}
-            hasPrev={(data?.pageNumber ?? 1) > 1}
-            hasNext={(data?.pageNumber ?? 1) < (data?.totalPages ?? 1)}
-            onPrev={() => setPageNumber((p) => Math.max(1, p - 1))}
-            onNext={() => setPageNumber((p) => p + 1)}
-            pageSize={pageSize}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPageNumber(1);
-            }}
+            page={ctl.page}
+            totalPages={view.totalPages}
+            hasPrev={view.hasPrev}
+            hasNext={view.hasNext}
+            onPrev={() => setPage(ctl.page - 1)}
+            onNext={() => setPage(ctl.page + 1)}
+            pageSize={ctl.pageSize}
+            onPageSizeChange={ctl.setPageSize}
           />
         </div>
       )}

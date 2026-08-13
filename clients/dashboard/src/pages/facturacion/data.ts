@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { searchFacturas, type FacturaRow } from "@/api/facturas";
 import { searchIncomes, searchPayments, type IncomeDto, type PaymentDto } from "@/api/projects";
 import { clientsApi, suppliersApi } from "@/api/administration";
+import { generatePaymentMilestones } from "@/lib/payment-terms";
 
 // ───────────────────────────────────────────────────────────────────────
 //  Modelo de la sección Facturación, derivado del modelo existente:
@@ -12,20 +13,30 @@ import { clientsApi, suppliersApi } from "@/api/administration";
 //  · El pendiente de una factura = total − líneas confirmadas vinculadas.
 // ───────────────────────────────────────────────────────────────────────
 
-export type VencimientoEstado = "Pagada" | "Vencido" | "Parcial" | "Abierto";
+export type VencimientoEstado = "Pagada" | "Vencido" | "Parcial" | "Abierto" | "Previsto";
 
 export type Vencimiento = {
   id: string;
   kind: "cobro" | "pago";
   reference: string; // "FRA-2026-003/1"
   invoiceId: string;
-  invoiceNumber: string;
+  invoiceNumber: string | null;
   counterparty: string;
   supplierId: string | null;
+  clientId: string | null;
+  companyId: string | null;
+  projectId: string | null;
   dueDate: string | null;
   amount: number;
   paid: number;
   pending: number;
+  /** % del total de la factura que representa este pago (de la línea o del hito derivado). */
+  percentage: number | null;
+  /** Nº de pago dentro de su factura (1-based) y total de pagos de esa factura. */
+  seq: number;
+  seqTotal: number;
+  /** true = hito derivado de la forma de pago (sin línea de caja registrada aún). */
+  previsto: boolean;
   estado: VencimientoEstado;
 };
 
@@ -117,35 +128,70 @@ export function useFacturacion() {
 
     const aggregates: InvoiceAgg[] = [];
     const vencimientos: Vencimiento[] = [];
-    const lineRef = new Map<string, { reference: string; invoiceNumber: string }>();
+    const lineRef = new Map<string, { reference: string; invoiceNumber: string | null }>();
 
     for (const f of invoices) {
       const counterparty =
         f.type === "Emitida"
           ? (f.clientId && clientName.get(f.clientId)) || "—"
           : (f.supplierId && supplierName.get(f.supplierId)) || "—";
+      const refBase = f.number ?? "(sin número)";
       const lines = (f.type === "Emitida" ? byInvoiceInc.get(f.id) : byInvoicePay.get(f.id)) ?? [];
       const sorted = [...lines].sort((a, b) => (a.date ?? "9999").localeCompare(b.date ?? "9999"));
-      const vencs: Vencimiento[] = sorted.map((l, i) => {
+      let vencs: Vencimiento[] = sorted.map((l, i) => {
         const paid = l.confirmed ? l.amount : 0;
         const pending = l.amount - paid;
-        const reference = `${f.number}/${i + 1}`;
+        const reference = `${refBase}/${i + 1}`;
         lineRef.set(l.id, { reference, invoiceNumber: f.number });
         return {
           id: l.id,
-          kind: f.type === "Emitida" ? "cobro" : "pago",
+          kind: f.type === "Emitida" ? ("cobro" as const) : ("pago" as const),
           reference,
           invoiceId: f.id,
           invoiceNumber: f.number,
           counterparty,
           supplierId: "supplierId" in l ? ((l as PaymentDto).supplierId ?? f.supplierId) : null,
+          clientId: f.clientId,
+          companyId: f.companyId,
+          projectId: l.projectId ?? f.projectId,
           dueDate: l.date,
           amount: l.amount,
           paid,
           pending,
-          estado: pending <= EPS ? "Pagada" : isOverdue(l.date) ? "Vencido" : "Abierto",
+          percentage: l.percentage,
+          seq: i + 1,
+          seqTotal: sorted.length,
+          previsto: false,
+          estado: pending <= EPS ? ("Pagada" as const) : isOverdue(l.date) ? ("Vencido" as const) : ("Abierto" as const),
         };
       });
+
+      // Sin líneas registradas: proyectar hitos PREVISTOS desde la forma de pago,
+      // para ver los pagos futuros (30 % / 70 %…) aunque nadie los haya generado aún.
+      if (vencs.length === 0 && f.paymentTerms) {
+        const milestones = generatePaymentMilestones(f.paymentTerms, f.total, f.invoiceDate) ?? [];
+        vencs = milestones.map((m, i) => ({
+          id: `${f.id}-m${i + 1}`,
+          kind: f.type === "Emitida" ? ("cobro" as const) : ("pago" as const),
+          reference: `${refBase}/${i + 1}`,
+          invoiceId: f.id,
+          invoiceNumber: f.number,
+          counterparty,
+          supplierId: f.supplierId,
+          clientId: f.clientId,
+          companyId: f.companyId,
+          projectId: f.projectId,
+          dueDate: m.dueDate ?? f.dueDate,
+          amount: m.amount,
+          paid: 0,
+          pending: m.amount,
+          percentage: m.percentage,
+          seq: i + 1,
+          seqTotal: milestones.length,
+          previsto: true,
+          estado: "Previsto" as const,
+        }));
+      }
       vencimientos.push(...vencs);
 
       const charged = vencs.reduce((s, v) => s + v.paid, 0);

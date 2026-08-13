@@ -68,7 +68,7 @@ public sealed partial class GetCashflowInvoicePdfQueryHandler(
             : string.Join(" · ", new[] { company.Phone, company.Email }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
         byte[] content = renderer.Render(new InvoicePdfData(
-            invoice.Number,
+            invoice.Number ?? "(sin número)",
             invoice.InvoiceDate,
             invoice.DueDate,
             counterpartyName,
@@ -90,7 +90,7 @@ public sealed partial class GetCashflowInvoicePdfQueryHandler(
             record?.QrPayload,
             record?.Hash));
 
-        return new InvoicePdfDto(content, $"factura-{invoice.Number}.pdf");
+        return new InvoicePdfDto(content, $"factura-{invoice.Number ?? "sin-numero"}.pdf");
     }
 
     /// <summary>Best-effort logo fetch: a broken logo must never break the invoice PDF. Upload

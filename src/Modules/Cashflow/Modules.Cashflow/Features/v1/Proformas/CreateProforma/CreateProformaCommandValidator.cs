@@ -12,17 +12,18 @@ public sealed class CreateProformaCommandValidator : AbstractValidator<CreatePro
         RuleFor(x => x.Number).NotEmpty().MaximumLength(64);
         RuleFor(x => x.Responsible).MaximumLength(128);
 
+        // Los mensajes llegan tal cual al usuario (el dashboard los muestra en el toast).
         RuleFor(x => x.ClientId).NotNull()
             .When(x => x.Type == InvoiceType.Emitida)
-            .WithMessage("An issued (Emitida) proforma requires a ClientId.");
+            .WithMessage("Una proforma emitida requiere un cliente.");
 
         RuleFor(x => x.SupplierId).NotNull()
             .When(x => x.Type == InvoiceType.Recibida)
-            .WithMessage("A received (Recibida) proforma requires a SupplierId.");
+            .WithMessage("Una proforma recibida requiere un proveedor.");
 
         RuleFor(x => x.PaymentTerms!)
             .Must(pt => PaymentTerms.TryParse(pt, out _))
             .When(x => !string.IsNullOrWhiteSpace(x.PaymentTerms))
-            .WithMessage("Unrecognized payment-terms code.");
+            .WithMessage("Forma de pago no reconocida (p. ej. 60D, 100PP, 30PP70-60D, DOMICILIADO).");
     }
 }

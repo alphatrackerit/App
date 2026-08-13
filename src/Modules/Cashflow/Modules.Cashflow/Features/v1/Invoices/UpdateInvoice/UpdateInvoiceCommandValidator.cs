@@ -9,7 +9,8 @@ public sealed class UpdateInvoiceCommandValidator : AbstractValidator<UpdateInvo
     public UpdateInvoiceCommandValidator()
     {
         RuleFor(x => x.InvoiceId).NotEmpty();
-        RuleFor(x => x.Number).NotEmpty().MaximumLength(64);
+        // Emitidas require a number; the command carries no Type, so the domain Update guard enforces it.
+        RuleFor(x => x.Number).MaximumLength(64);
 
         RuleFor(x => x.PaymentTerms!)
             .Must(pt => PaymentTerms.TryParse(pt, out _))

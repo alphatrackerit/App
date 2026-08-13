@@ -193,7 +193,14 @@ export type BankMovementInput = {
 export const bankMovementsApi = richCatalog<BankMovementRow, BankMovementInput>("/bank-movements");
 
 // Status — polymorphic by Type (PROYECTO | INGRESO | PAGO) + color.
-export type StatusType = "Proyecto" | "Ingreso" | "Pago";
+export type StatusType =
+  | "Proyecto"
+  | "Ingreso"
+  | "Pago"
+  | "FacturaEmitida"
+  | "FacturaRecibida"
+  | "ProformaEmitida"
+  | "ProformaRecibida";
 export type StatusRow = Lookup & { type: StatusType | null; colorHex: string | null };
 export type StatusInput = LookupInput & { type?: StatusType | null; colorHex?: string | null };
 export const statusCatalog = richCatalog<StatusRow, StatusInput>("/statuses");

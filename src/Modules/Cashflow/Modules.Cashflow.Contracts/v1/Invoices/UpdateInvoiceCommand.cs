@@ -5,7 +5,7 @@ namespace FSH.Modules.Cashflow.Contracts.v1.Invoices;
 /// <summary>Updates an invoice's editable header fields. The invoice <c>Type</c> is immutable.</summary>
 public sealed record UpdateInvoiceCommand(
     Guid InvoiceId,
-    string Number,
+    string? Number,
     decimal Total,
     Guid? ClientId = null,
     Guid? SupplierId = null,

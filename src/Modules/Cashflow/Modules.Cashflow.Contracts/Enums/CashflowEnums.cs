@@ -67,6 +67,15 @@ public enum VerifactuStatus
     ErrorTecnico,
 }
 
+/// <summary>Pending-work filter for proforma searches: proformas with no linked invoice yet, with
+/// draft (numberless) linked invoices, or only partially invoiced.</summary>
+public enum ProformaPendingFilter
+{
+    SinFactura,
+    FacturasSinNumero,
+    ParcialmenteFacturada,
+}
+
 /// <summary>AEAT target environment for a company's VeriFactu submissions.</summary>
 public enum VerifactuEnvironment
 {

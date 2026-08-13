@@ -25,7 +25,7 @@ public sealed record ProformaDto(
 /// <summary>One invoice generated from / linked to a proforma.</summary>
 public sealed record ProformaInvoiceDto(
     Guid Id,
-    string Number,
+    string? Number,
     DateTime? InvoiceDate,
     DateTime? DueDate,
     decimal Total,

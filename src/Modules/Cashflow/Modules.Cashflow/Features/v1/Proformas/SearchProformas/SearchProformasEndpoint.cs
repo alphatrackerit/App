@@ -16,10 +16,11 @@ public static class SearchProformasEndpoint
         return endpoints.MapGet("/proformas",
                 (string? search, int? pageNumber, int? pageSize, string? sortBy, string? sortDir,
                  InvoiceType? type, Guid? clientId, Guid? supplierId, Guid? companyId, Guid? projectId,
+                 ProformaPendingFilter? pending,
                  IMediator mediator, CancellationToken ct) =>
                     mediator.Send(new SearchProformasQuery(
                         search, pageNumber ?? 1, pageSize ?? 20, sortBy, sortDir,
-                        type, clientId, supplierId, companyId, projectId), ct))
+                        type, clientId, supplierId, companyId, projectId, pending), ct))
             .WithName("SearchProformas")
             .WithSummary("Search proformas")
             .RequirePermission(CashflowPermissions.Proformas.View);

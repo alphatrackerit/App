@@ -46,7 +46,7 @@ public sealed class GenerateMilestonesCommandHandler(CashflowDbContext dbContext
             if (invoice.Type == InvoiceType.Emitida)
             {
                 var income = Income.Create(
-                    amount, invoice.Number, date, percentage, command.ProjectId, statusId: null, confirmed: false);
+                    amount, invoice.Number ?? "(sin número)", date, percentage, command.ProjectId, statusId: null, confirmed: false);
                 income.LinkInvoice(invoice.Id);
                 dbContext.Incomes.Add(income);
                 ids.Add(income.Id);
@@ -54,7 +54,7 @@ public sealed class GenerateMilestonesCommandHandler(CashflowDbContext dbContext
             else
             {
                 var payment = Payment.Create(
-                    amount, invoice.Number, date, percentage, invoice.SupplierId, command.ProjectId, statusId: null, confirmed: false);
+                    amount, invoice.Number ?? "(sin número)", date, percentage, invoice.SupplierId, command.ProjectId, statusId: null, confirmed: false);
                 payment.LinkInvoice(invoice.Id);
                 dbContext.Payments.Add(payment);
                 ids.Add(payment.Id);

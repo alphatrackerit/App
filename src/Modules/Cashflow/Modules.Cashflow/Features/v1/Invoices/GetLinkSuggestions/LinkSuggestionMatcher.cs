@@ -15,7 +15,7 @@ public static class LinkSuggestionMatcher
     private const decimal Tolerance = 0.01m;
 
     public sealed record InvoiceCandidate(
-        Guid Id, string Number, InvoiceType Type, decimal Total,
+        Guid Id, string? Number, InvoiceType Type, decimal Total,
         Guid? CounterpartyId, DateTime? InvoiceDate, PaymentTerms? Terms);
 
     public sealed record LineCandidate(

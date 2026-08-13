@@ -38,7 +38,8 @@ import {
   EntitySearch,
   EntityColHeader,
   EntityFilterEmptyRow,
-  useTableControls,
+  useTableState,
+  useTableRows,
   Field,
 } from "@/components/list";
 import { cn } from "@/lib/cn";
@@ -80,29 +81,30 @@ export function ProjectsPage() {
   const companyId = searchParams.get("empresa");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  // Sort/filtro por columna + paginación. Con un orden o filtro activo la
+  // consulta se ensancha al dataset completo y la tabla pagina en memoria.
+  const ctl = useTableState({ pageSize: PAGE_SIZE });
+  const { setPage } = ctl;
   const [editor, setEditor] = useState<EditorState>({ mode: "closed" });
 
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search.trim());
-      setPageNumber(1);
+      setPage(1);
     }, 250);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, setPage]);
 
   useEffect(() => {
-    setPageNumber(1);
-  }, [companyId]);
+    setPage(1);
+  }, [companyId, setPage]);
 
   const query = useQuery({
-    queryKey: ["projects", "list", { search: debouncedSearch, pageNumber, pageSize, companyId }],
+    queryKey: ["projects", "list", { search: debouncedSearch, ...ctl.fetch, companyId }],
     queryFn: () =>
       searchProjects({
         search: debouncedSearch || undefined,
-        pageNumber,
-        pageSize,
+        ...ctl.fetch,
         sortBy: "name",
         sortDir: "asc",
         companyId: companyId ?? undefined,
@@ -122,14 +124,19 @@ export function ProjectsPage() {
     : null;
 
   const data = query.data;
-  const ctl = useTableControls(data?.items ?? [], {
-    name: (p) => p.name,
-    cliente: (p) => nameOf(clientsQ.data?.items, p.clientId),
-    pais: (p) => nameOf(countriesQ.data?.items, p.countryId),
-    estado: (p) => nameOf(statusesQ.data?.items, p.statusId),
-    empresa: (p) => nameOf(companiesQ.data?.items, p.companyId),
-  });
-  const items = ctl.rows;
+  const view = useTableRows(
+    data?.items ?? [],
+    {
+      name: (p) => p.name,
+      cliente: (p) => nameOf(clientsQ.data?.items, p.clientId),
+      pais: (p) => nameOf(countriesQ.data?.items, p.countryId),
+      estado: (p) => nameOf(statusesQ.data?.items, p.statusId),
+      empresa: (p) => nameOf(companiesQ.data?.items, p.companyId),
+    },
+    ctl,
+    data,
+  );
+  const items = view.rows;
   const searchActive = debouncedSearch.length > 0;
   // Con filtros de columna activos la tabla sigue montada aunque no haya filas,
   // para que la cabecera (y sus filtros) siga accesible y se puedan cambiar/limpiar.
@@ -140,7 +147,7 @@ export function ProjectsPage() {
       <EntityPageHeader
         icon={Briefcase}
         title="Proyectos"
-        total={data?.totalCount ?? null}
+        total={view.totalCount}
         unit="proyecto"
         description="Gestiona los proyectos y su rentabilidad: venta, coste y beneficio, con sus ingresos, pagos y notas."
       >
@@ -303,17 +310,14 @@ export function ProjectsPage() {
           </EntityListCard>
 
           <EntityPager
-            page={data?.pageNumber ?? 1}
-            totalPages={data?.totalPages ?? 1}
-            hasPrev={!!data?.hasPrevious}
-            hasNext={!!data?.hasNext}
-            onPrev={() => setPageNumber((p) => Math.max(1, p - 1))}
-            onNext={() => setPageNumber((p) => p + 1)}
-            pageSize={pageSize}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPageNumber(1);
-            }}
+            page={ctl.page}
+            totalPages={view.totalPages}
+            hasPrev={view.hasPrev}
+            hasNext={view.hasNext}
+            onPrev={() => setPage(ctl.page - 1)}
+            onNext={() => setPage(ctl.page + 1)}
+            pageSize={ctl.pageSize}
+            onPageSizeChange={ctl.setPageSize}
           />
         </div>
       )}

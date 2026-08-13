@@ -12,7 +12,8 @@ export type FacturaType = "Emitida" | "Recibida";
 // An invoice row/detail. Emitida → linked to a Cliente; Recibida → to a Proveedor.
 export type FacturaDto = {
   id: string;
-  number: string;
+  /** Nulo en facturas recibidas en borrador (aún sin la factura del proveedor). */
+  number: string | null;
   dynamicsNumber: string | null;
   type: FacturaType;
   invoiceDate: string | null;
@@ -62,7 +63,8 @@ export type FacturaRow = FacturaDto;
 // Create/Update payload. `type` is immutable on update (ignored server-side there).
 export type FacturaInput = {
   type: FacturaType;
-  number: string;
+  /** Obligatorio en Emitidas; opcional (null) en Recibidas — borrador sin número. */
+  number: string | null;
   total: number;
   clientId?: string | null;
   supplierId?: string | null;
@@ -175,7 +177,7 @@ export async function linkLine(input: {
 // One proposed invoice ↔ line pair, with a human-readable reason.
 export type LinkSuggestionDto = {
   invoiceId: string;
-  invoiceNumber: string;
+  invoiceNumber: string | null;
   invoiceType: FacturaType;
   invoiceTotal: number;
   counterpartyName: string | null;
@@ -222,7 +224,7 @@ export function generateMilestones(id: string, projectId?: string | null): Promi
  * VeriFactu). apiFetch solo devuelve JSON, así que pedimos el blob directamente con los mismos
  * headers de auth + tenant.
  */
-export async function downloadFacturaPdf(invoiceId: string, invoiceNumber: string): Promise<void> {
+export async function downloadFacturaPdf(invoiceId: string, invoiceNumber: string | null): Promise<void> {
   const accessToken = tokenStore.getAccessToken();
   if (!accessToken) {
     throw new ApiRequestError(401, "Not signed in");
@@ -246,7 +248,7 @@ export async function downloadFacturaPdf(invoiceId: string, invoiceNumber: strin
   try {
     const anchor = document.createElement("a");
     anchor.href = objectUrl;
-    anchor.download = `factura-${invoiceNumber}.pdf`;
+    anchor.download = `factura-${invoiceNumber ?? "sin-numero"}.pdf`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -266,7 +268,7 @@ export type InvoiceReportStatus = "Settled" | "Overdue" | "Upcoming" | "NoDueDat
 
 export type InvoiceReportRow = {
   id: string;
-  number: string;
+  number: string | null;
   type: FacturaType;
   counterpartyName: string | null;
   companyName: string | null;

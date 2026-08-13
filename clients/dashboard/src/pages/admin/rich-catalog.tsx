@@ -64,7 +64,8 @@ import {
   EntityStatusBadge,
   EntityColHeader,
   EntityFilterEmptyRow,
-  useTableControls,
+  useTableState,
+  useTableRows,
   type ColValue,
   Field,
   type ComboboxOption,
@@ -127,33 +128,40 @@ function RichCatalogShell<TRow extends Base, TInput>({
 }) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  // Sort/filtro por columna + paginación. Con un orden o filtro activo la
+  // consulta se ensancha al dataset completo y la tabla pagina en memoria.
+  const ctl = useTableState({ pageSize: PAGE_SIZE });
+  const { setPage } = ctl;
   const [editor, setEditor] = useState<EditorState<TRow>>({ mode: "closed" });
 
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search.trim());
-      setPageNumber(1);
+      setPage(1);
     }, 250);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, setPage]);
 
   const q = useQuery({
-    queryKey: ["administration", queryKey, { search: debouncedSearch, pageNumber, pageSize }],
+    queryKey: ["administration", queryKey, { search: debouncedSearch, ...ctl.fetch }],
     queryFn: () =>
-      api.search({ search: debouncedSearch || undefined, pageNumber, pageSize, sortBy: "name", sortDir: "asc" }),
+      api.search({ search: debouncedSearch || undefined, ...ctl.fetch, sortBy: "name", sortDir: "asc" }),
     placeholderData: keepPreviousData,
   });
 
   const data = q.data;
-  const ctl = useTableControls(data?.items ?? [], Object.fromEntries(columns.map((c) => [c.key, c.get])));
-  const items = ctl.rows;
+  const view = useTableRows(
+    data?.items ?? [],
+    Object.fromEntries(columns.map((c) => [c.key, c.get])),
+    ctl,
+    data,
+  );
+  const items = view.rows;
   const searchActive = debouncedSearch.length > 0;
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <EntityPageHeader icon={icon} title={title} total={data?.totalCount ?? null} unit={unit} description={description}>
+      <EntityPageHeader icon={icon} title={title} total={view.totalCount} unit={unit} description={description}>
         <Button
           onClick={() => setEditor({ mode: "create" })}
           className="h-9 flex-1 gap-1.5 rounded-lg px-4 text-[13px] font-semibold sm:flex-none"
@@ -242,17 +250,14 @@ function RichCatalogShell<TRow extends Base, TInput>({
           </EntityListCard>
 
           <EntityPager
-            page={data?.pageNumber ?? 1}
-            totalPages={data?.totalPages ?? 1}
-            hasPrev={!!data?.hasPrevious}
-            hasNext={!!data?.hasNext}
-            onPrev={() => setPageNumber((p) => Math.max(1, p - 1))}
-            onNext={() => setPageNumber((p) => p + 1)}
-            pageSize={pageSize}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPageNumber(1);
-            }}
+            page={ctl.page}
+            totalPages={view.totalPages}
+            hasPrev={view.hasPrev}
+            hasNext={view.hasNext}
+            onPrev={() => setPage(ctl.page - 1)}
+            onNext={() => setPage(ctl.page + 1)}
+            pageSize={ctl.pageSize}
+            onPageSizeChange={ctl.setPageSize}
           />
         </div>
       )}
@@ -580,6 +585,10 @@ const STATUS_TYPES: { value: StatusType; label: string }[] = [
   { value: "Proyecto", label: "Proyecto" },
   { value: "Ingreso", label: "Ingreso" },
   { value: "Pago", label: "Pago" },
+  { value: "FacturaEmitida", label: "Factura emitida" },
+  { value: "FacturaRecibida", label: "Factura recibida" },
+  { value: "ProformaEmitida", label: "Proforma emitida" },
+  { value: "ProformaRecibida", label: "Proforma recibida" },
 ];
 
 function StatusEditor({ state, api, queryKey, onClose }: EditorProps<StatusRow, StatusInput>) {
@@ -666,7 +675,7 @@ export function EstadosPage() {
       icon={ListChecks}
       queryKey="statuses"
       api={statusCatalog}
-      description="Catálogo polimórfico por tipo (Proyecto / Ingreso / Pago)."
+      description="Catálogo polimórfico por tipo (proyectos, ingresos, pagos, facturas y proformas)."
       cols="grid-cols-[1fr_120px_110px_48px]"
       columns={[
         { key: "name", label: "Nombre", get: (it) => it.name },
@@ -1589,32 +1598,39 @@ const fmtMoney = (n: number) => new Intl.NumberFormat("es-ES", { maximumFraction
 export function MovimientosBancosPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  // Sort/filtro por columna + paginación. Con un orden o filtro activo la
+  // consulta se ensancha al dataset completo y la tabla pagina en memoria.
+  const ctl = useTableState({ pageSize: PAGE_SIZE });
+  const { setPage } = ctl;
 
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search.trim());
-      setPageNumber(1);
+      setPage(1);
     }, 250);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, setPage]);
 
   const q = useQuery({
-    queryKey: ["administration", "bank-movements", { search: debouncedSearch, pageNumber, pageSize }],
-    queryFn: () => bankMovementsApi.search({ search: debouncedSearch || undefined, pageNumber, pageSize, sortDir: "desc" }),
+    queryKey: ["administration", "bank-movements", { search: debouncedSearch, ...ctl.fetch }],
+    queryFn: () => bankMovementsApi.search({ search: debouncedSearch || undefined, ...ctl.fetch, sortDir: "desc" }),
     placeholderData: keepPreviousData,
   });
 
   const data = q.data;
-  const ctl = useTableControls<BankMovementRow>(data?.items ?? [], {
-    fecha: (it) => it.date,
-    concepto: (it) => it.concept,
-    importe: (it) => it.amount,
-    saldo: (it) => it.balance,
-    banco: (it) => it.bankName,
-  });
-  const items: BankMovementRow[] = ctl.rows;
+  const view = useTableRows<BankMovementRow>(
+    data?.items ?? [],
+    {
+      fecha: (it) => it.date,
+      concepto: (it) => it.concept,
+      importe: (it) => it.amount,
+      saldo: (it) => it.balance,
+      banco: (it) => it.bankName,
+    },
+    ctl,
+    data,
+  );
+  const items: BankMovementRow[] = view.rows;
   const cols = "grid-cols-[110px_1fr_120px_120px_150px]";
 
   return (
@@ -1622,7 +1638,7 @@ export function MovimientosBancosPage() {
       <EntityPageHeader
         icon={Banknote}
         title="Movimientos de banco"
-        total={data?.totalCount ?? null}
+        total={view.totalCount}
         unit="movimiento"
         description="Líneas importadas de extractos bancarios."
       />
@@ -1686,17 +1702,14 @@ export function MovimientosBancosPage() {
           </div>
 
           <EntityPager
-            page={data?.pageNumber ?? 1}
-            totalPages={data?.totalPages ?? 1}
-            hasPrev={!!data?.hasPrevious}
-            hasNext={!!data?.hasNext}
-            onPrev={() => setPageNumber((p) => Math.max(1, p - 1))}
-            onNext={() => setPageNumber((p) => p + 1)}
-            pageSize={pageSize}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPageNumber(1);
-            }}
+            page={ctl.page}
+            totalPages={view.totalPages}
+            hasPrev={view.hasPrev}
+            hasNext={view.hasNext}
+            onPrev={() => setPage(ctl.page - 1)}
+            onNext={() => setPage(ctl.page + 1)}
+            pageSize={ctl.pageSize}
+            onPageSizeChange={ctl.setPageSize}
           />
         </div>
       )}

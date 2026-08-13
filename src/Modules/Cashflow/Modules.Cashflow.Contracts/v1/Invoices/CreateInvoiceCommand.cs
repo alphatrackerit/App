@@ -10,7 +10,7 @@ namespace FSH.Modules.Cashflow.Contracts.v1.Invoices;
 /// </summary>
 public sealed record CreateInvoiceCommand(
     InvoiceType Type,
-    string Number,
+    string? Number,
     decimal Total,
     Guid? ClientId = null,
     Guid? SupplierId = null,

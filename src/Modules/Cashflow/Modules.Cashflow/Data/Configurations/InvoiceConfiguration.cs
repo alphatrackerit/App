@@ -10,12 +10,19 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        builder.ToTable("Facturas", t => t.HasCheckConstraint(
-            "CK_Facturas_Tipo",
-            """("Tipo" = 'Emitida' AND "ClienteId" IS NOT NULL) OR ("Tipo" = 'Recibida' AND "ProveedorId" IS NOT NULL)"""));
+        builder.ToTable("Facturas", t =>
+        {
+            t.HasCheckConstraint(
+                "CK_Facturas_Tipo",
+                """("Tipo" = 'Emitida' AND "ClienteId" IS NOT NULL) OR ("Tipo" = 'Recibida' AND "ProveedorId" IS NOT NULL)""");
+            // Emitidas always carry a number (VeriFactu hashes it); only Recibidas may be draft (sin número).
+            t.HasCheckConstraint(
+                "CK_Facturas_Numero_Emitida",
+                """("Tipo" = 'Recibida') OR ("Numero" IS NOT NULL)""");
+        });
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Number).HasColumnName("Numero").IsRequired();
+        builder.Property(x => x.Number).HasColumnName("Numero");
         builder.Property(x => x.DynamicsNumber).HasColumnName("NumeroDynamics");
         builder.Property(x => x.Type).HasColumnName("Tipo").HasConversion<string>().HasMaxLength(16).IsRequired();
         builder.Property(x => x.InvoiceDate).HasColumnName("FechaFactura").HasColumnType("timestamp without time zone");

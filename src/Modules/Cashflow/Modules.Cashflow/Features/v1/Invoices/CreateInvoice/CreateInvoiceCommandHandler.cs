@@ -15,7 +15,7 @@ public sealed class CreateInvoiceCommandHandler(CashflowDbContext dbContext)
 
         var invoice = command.Type == InvoiceType.Emitida
             ? Invoice.Issued(
-                command.Number, command.ClientId!.Value, command.Total,
+                command.Number!, command.ClientId!.Value, command.Total,
                 command.InvoiceDate, command.DueDate, command.CompanyId, command.SocietyId,
                 command.TaxBase, command.Vat, command.PaymentTerms, command.StatusId,
                 command.DynamicsNumber, command.Notes, command.ProjectId)

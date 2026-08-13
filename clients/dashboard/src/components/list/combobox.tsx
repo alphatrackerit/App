@@ -40,6 +40,7 @@ export function Combobox({
   searchable = false,
   clearable = false,
   emptyOptionLabel,
+  emptyMessage,
   variant = "field",
   align = "start",
   disabled,
@@ -55,6 +56,10 @@ export function Combobox({
   clearable?: boolean;
   /** When provided, shows a "no value" option at the top of the list. */
   emptyOptionLabel?: string;
+  /** Shown when the caller passes NO options at all. Say *why* the list is
+   *  empty — "no hay proformas emitidas" beats a bare "sin resultados", which
+   *  reads as a loading bug. Filtering to zero has its own message. */
+  emptyMessage?: string;
   variant?: Variant;
   align?: "start" | "end" | "center";
   disabled?: boolean;
@@ -109,7 +114,7 @@ export function Combobox({
           <DropdownMenuTrigger asChild disabled={disabled}>
             <FieldTrigger
               id={id}
-              placeholder={placeholder ?? `Select ${label.toLowerCase()}…`}
+              placeholder={placeholder ?? `Seleccionar ${label.toLowerCase()}…`}
               selected={selected}
               hasValue={hasValue}
               hasClear={showFieldClear}
@@ -120,7 +125,7 @@ export function Combobox({
           {showFieldClear && (
             <button
               type="button"
-              aria-label={`Clear ${label.toLowerCase()}`}
+              aria-label={`Quitar ${label.toLowerCase()}`}
               onClick={() => onChange(null)}
               className="absolute right-8 top-1/2 grid h-5 w-5 -translate-y-1/2 cursor-pointer place-items-center rounded text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
             >
@@ -146,7 +151,7 @@ export function Combobox({
               ref={inputRef}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              placeholder={`Filter ${label.toLowerCase()}…`}
+              placeholder={`Filtrar ${label.toLowerCase()}…`}
               // Stop Radix's typeahead from swallowing the user's input.
               onKeyDown={(e) => {
                 if (e.key !== "Escape") e.stopPropagation();
@@ -169,7 +174,7 @@ export function Combobox({
                   inputRef.current?.focus();
                 }}
                 className="grid h-5 w-5 cursor-pointer place-items-center rounded text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-                aria-label="Clear filter"
+                aria-label="Limpiar filtro"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -194,7 +199,9 @@ export function Combobox({
 
           {filtered.length === 0 ? (
             <li className="px-3 py-3 text-center text-[12px] text-[var(--color-muted-foreground)]">
-              No matches.
+              {options.length === 0
+                ? (emptyMessage ?? "No hay opciones disponibles.")
+                : `Nada coincide con «${filter.trim()}».`}
             </li>
           ) : (
             filtered.map((opt) => (
@@ -300,7 +307,7 @@ const FilterTrigger = ({
         {...props}
       >
         <span className="opacity-70">{label.toUpperCase()}:</span>
-        <span className="truncate">{selected?.label.toUpperCase() ?? "ALL"}</span>
+        <span className="truncate">{selected?.label.toUpperCase() ?? "TODOS"}</span>
         <ChevronDown
           aria-hidden
           className="h-3 w-3 transition-transform duration-[var(--duration-fast)] data-[state=open]:rotate-180"
@@ -309,7 +316,7 @@ const FilterTrigger = ({
       {clearable && hasValue && (
         <button
           type="button"
-          aria-label={`Clear ${label} filter`}
+          aria-label={`Quitar filtro de ${label.toLowerCase()}`}
           onClick={onClear}
           disabled={disabled}
           className="ml-1 grid h-5 w-5 cursor-pointer place-items-center rounded-full text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"

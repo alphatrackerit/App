@@ -7,7 +7,7 @@ public sealed record InvoiceItemDto(Guid Id, string Description, decimal Quantit
 
 public sealed record InvoiceDto(
     Guid Id,
-    string Number,
+    string? Number,
     string? DynamicsNumber,
     InvoiceType Type,
     DateTime? InvoiceDate,

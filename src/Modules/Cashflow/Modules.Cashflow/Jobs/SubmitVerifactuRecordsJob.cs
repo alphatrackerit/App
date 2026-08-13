@@ -112,13 +112,14 @@ public sealed partial class SubmitVerifactuRecordsJob
         var records = batch.Select(b =>
         {
             var prev = b.Record.PreviousHash is { } ph && previousByHash.TryGetValue(ph, out var p)
-                ? new AeatPreviousRecordRef(company.Nif, p.Number, p.InvoiceDate ?? b.Invoice.InvoiceDate!.Value, ph)
+                ? new AeatPreviousRecordRef(company.Nif, p.Number!, p.InvoiceDate ?? b.Invoice.InvoiceDate!.Value, ph)
                 : null;
             var recipient = b.Invoice.ClientId is { } cid && clients.TryGetValue(cid, out var cl) ? cl : null;
             decimal taxBase = b.Invoice.TaxBase ?? b.Invoice.Total - (b.Invoice.Vat ?? 0m);
             decimal? rate = taxBase > 0 && b.Invoice.Vat is { } vat ? Math.Round(vat / taxBase * 100m, 2) : null;
+            // VeriFactu records only exist for Emitidas, which always carry a number (DB check constraint).
             return new AeatAltaRecord(
-                b.Invoice.Number,
+                b.Invoice.Number!,
                 b.Invoice.InvoiceDate!.Value,
                 string.IsNullOrWhiteSpace(b.Invoice.Notes) ? "Prestación de servicios / entrega de bienes" : b.Invoice.Notes!,
                 recipient?.Name,

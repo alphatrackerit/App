@@ -205,14 +205,16 @@ que Invoice→Income/Payment: agregados independientes, referenciados por identi
 - **Numeración**: `Proforma.Number` texto libre (único asimétrico). Las facturas generadas se
   numeran `{Numero}-{i}` (borrador, renumerables); el handler valida colisiones y responde 409
   listándolas. La generación NO es idempotente a propósito (auto + manual se combinan).
-  **2026-08-03: la generación automática se RETIRÓ de la UI a petición del usuario** — el flujo
-  real es asociar facturas existentes desde el editor de factura (selector «Proforma», 1..N
-  facturas por proforma); el endpoint `GenerateInvoicesFromProforma` sigue en el backend por si
-  se reactiva.
+  (Historial: la generación se retiró de la UI el 2026-08-03 y se RESTAURÓ el mismo día a
+  petición del usuario, junto con la creación directa.)
 - **Permisos**: resource `Proformas` (View/Create/Update/Delete/GenerateInvoices).
 - **UI** (`/facturacion/proformas`): tabla con Total/Facturado/Pendiente (rojo si exceso), editor
-  (mismo patrón que facturas, con adjunto), diálogo "Facturas" = cuadre informativo + lista de
-  facturas asociadas (sin botón de generar),
+  (mismo patrón que facturas, con adjunto), diálogo "Facturas" con TRES vías de asociación:
+  (1) **"Crear factura"** — alta directa en borrador con los datos de la proforma (contraparte,
+  empresa, sociedad, proyecto, FormaPago; base/IVA proporcionales al importe elegido, que por
+  defecto es el pendiente; número `{Numero}-{n}` con primer sufijo libre; vinculada al crearse);
+  (2) **"Generar facturas"** — una por plazo de la FormaPago, con confirmación de dos pasos si ya
+  hay vinculadas; (3) manual desde el editor de facturas (selector "Proforma"). Más
   descarga de PDF. En el editor de facturas: selector "Proforma" (vinculación manual, filtrado
   por tipo); la vinculación viaja por `LinkInvoiceToProforma`, no por el update normal.
 

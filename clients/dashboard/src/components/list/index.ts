@@ -23,7 +23,16 @@ export {
   EntityListLoading,
   type EntityStatusTone,
 } from "./entity-shell";
-export { EntityColHeader, EntityFilterEmptyRow, useTableControls, type ColValue, type SortState } from "./table-controls";
+export {
+  EntityColHeader,
+  EntityFilterEmptyRow,
+  useTableControls,
+  useTableState,
+  useTableRows,
+  type ColValue,
+  type SortState,
+  type TableState,
+} from "./table-controls";
 export {
   EntityDetailBack,
   EntityDetailHero,

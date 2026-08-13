@@ -6,7 +6,7 @@ namespace FSH.Modules.Cashflow.Contracts.v1.Invoices;
 /// <summary>One proposed invoice ↔ cash-line link, with a human-readable reason.</summary>
 public sealed record LinkSuggestionDto(
     Guid InvoiceId,
-    string InvoiceNumber,
+    string? InvoiceNumber,
     InvoiceType InvoiceType,
     decimal InvoiceTotal,
     string? CounterpartyName,

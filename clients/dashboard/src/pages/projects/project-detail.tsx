@@ -652,8 +652,8 @@ function LinkInvoiceDialog({
                   <ul className="divide-y divide-[var(--color-border)]">
                     {candidates.map((f) => (
                       <li key={f.id} className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_78px_78px_90px_84px] items-center gap-2 px-3 py-2">
-                        <span className="min-w-0 truncate text-[13px] font-medium text-[var(--color-foreground)]" title={f.number}>
-                          {f.number}
+                        <span className="min-w-0 truncate text-[13px] font-medium text-[var(--color-foreground)]" title={f.number ?? "(sin número)"}>
+                          {f.number ?? "(sin número)"}
                         </span>
                         <span className="min-w-0 truncate text-[12.5px] text-[var(--color-muted-foreground)]" title={counterpartyOf(f)}>
                           {counterpartyOf(f)}

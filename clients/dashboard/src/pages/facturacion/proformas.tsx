@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowUpRight,
   Download,
   ExternalLink,
   FileSpreadsheet,
@@ -19,14 +21,17 @@ import {
   createProforma,
   deleteProforma,
   downloadProformaPdf,
+  generateInvoicesFromProforma,
   getProformaDocumentUrl,
   getProformaLines,
+  linkInvoiceToProforma,
   searchProformas,
   updateProforma,
   type ProformaInput,
+  type ProformaPendingFilter,
   type ProformaRow,
 } from "@/api/proformas";
-import type { FacturaType } from "@/api/facturas";
+import { createFactura, type FacturaType } from "@/api/facturas";
 import { searchProjects } from "@/api/projects";
 import { clientsApi, companiesApi, societiesApi, statusesApi, suppliersApi } from "@/api/administration";
 import { Button } from "@/components/ui/button";
@@ -46,6 +51,7 @@ import {
   EntityColHeader,
   EntityEmpty,
   EntityFilterEmptyRow,
+  EntityFilterPill,
   EntityListCard,
   EntityListHeader,
   EntityListLoading,
@@ -56,10 +62,12 @@ import {
   EntitySearch,
   EntityStatusBadge,
   Field,
-  useTableControls,
+  useTableState,
+  useTableRows,
   type ComboboxOption,
 } from "@/components/list";
 import { describe } from "@/lib/list-helpers";
+import { PAYMENT_TERMS_HELP, isValidPaymentTerms } from "@/lib/payment-terms";
 
 const PAGE_SIZE = 20;
 const cols =
@@ -97,21 +105,26 @@ const TYPE_OPTIONS: { value: FacturaType; label: string }[] = [
 export function ProformasPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  // Sort/filtro por columna + paginación. Con un orden o filtro activo la
+  // consulta se ensancha al dataset completo y la tabla pagina en memoria.
+  const ctl = useTableState({ pageSize: PAGE_SIZE });
+  const { setPage } = ctl;
   const [editor, setEditor] = useState<EditorState>({ mode: "closed" });
+  // Filtro servidor de trabajo pendiente (sin factura / facturas sin número / parcial).
+  const [pending, setPending] = useState<ProformaPendingFilter | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search.trim());
-      setPageNumber(1);
+      setPage(1);
     }, 250);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, setPage]);
 
   const q = useQuery({
-    queryKey: ["proformas", { search: debouncedSearch, pageNumber, pageSize }],
-    queryFn: () => searchProformas({ search: debouncedSearch || undefined, pageNumber, pageSize, sortDir: "desc" }),
+    queryKey: ["proformas", { search: debouncedSearch, pending, ...ctl.fetch }],
+    queryFn: () =>
+      searchProformas({ search: debouncedSearch || undefined, pending: pending ?? undefined, ...ctl.fetch, sortDir: "desc" }),
     placeholderData: keepPreviousData,
   });
 
@@ -138,27 +151,32 @@ export function ProformasPage() {
   });
 
   const data = q.data;
-  const ctl = useTableControls(data?.items ?? [], {
-    numero: (it) => it.number,
-    tipo: (it) => it.type,
-    contraparte: (it) => counterparty(it),
-    empresa: (it) => nameOf(companiesQ.data?.items, it.companyId),
-    responsable: (it) => it.responsible,
-    fecha: (it) => it.date,
-    total: (it) => it.total,
-    facturado: (it) => it.invoiced,
-    pendiente: (it) => it.total - it.invoiced,
-  });
-  const items = ctl.rows;
+  const view = useTableRows(
+    data?.items ?? [],
+    {
+      numero: (it) => it.number,
+      tipo: (it) => it.type,
+      contraparte: (it) => counterparty(it),
+      empresa: (it) => nameOf(companiesQ.data?.items, it.companyId),
+      responsable: (it) => it.responsible,
+      fecha: (it) => it.date,
+      total: (it) => it.total,
+      facturado: (it) => it.invoiced,
+      pendiente: (it) => it.total - it.invoiced,
+    },
+    ctl,
+    data,
+  );
+  const items = view.rows;
   const searchActive = debouncedSearch.length > 0;
-  const showEmpty = items.length === 0 && !ctl.hasActiveFilters;
+  const showEmpty = items.length === 0 && !ctl.hasActiveFilters && pending === null;
 
   return (
     <div className="space-y-4 sm:space-y-6">
       <EntityPageHeader
         icon={FileSpreadsheet}
         title="Proformas"
-        total={data?.totalCount ?? null}
+        total={view.totalCount}
         unit="proforma"
         description="Documentos comerciales previos a la factura: 1 proforma genera N facturas."
       >
@@ -172,6 +190,21 @@ export function ProformasPage() {
       </EntityPageHeader>
 
       <EntitySearch value={search} onChange={setSearch} placeholder="Buscar por número, cliente, proveedor, empresa o importe…" />
+
+      <EntityFilterPill<ProformaPendingFilter | null>
+        label="Pendientes de facturación"
+        value={pending}
+        onChange={(next) => {
+          setPending(next);
+          setPage(1);
+        }}
+        options={[
+          { value: null, label: "Todas" },
+          { value: "SinFactura", label: "Sin factura" },
+          { value: "FacturasSinNumero", label: "Facturas sin número" },
+          { value: "ParcialmenteFacturada", label: "Parcialmente facturadas" },
+        ]}
+      />
 
       {q.isLoading && items.length === 0 ? (
         <EntityListLoading desktopColumns={cols} />
@@ -311,17 +344,14 @@ export function ProformasPage() {
           </EntityListCard>
 
           <EntityPager
-            page={data?.pageNumber ?? 1}
-            totalPages={data?.totalPages ?? 1}
-            hasPrev={!!data?.hasPrevious}
-            hasNext={!!data?.hasNext}
-            onPrev={() => setPageNumber((p) => Math.max(1, p - 1))}
-            onNext={() => setPageNumber((p) => p + 1)}
-            pageSize={pageSize}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPageNumber(1);
-            }}
+            page={ctl.page}
+            totalPages={view.totalPages}
+            hasPrev={view.hasPrev}
+            hasNext={view.hasNext}
+            onPrev={() => setPage(ctl.page - 1)}
+            onNext={() => setPage(ctl.page + 1)}
+            pageSize={ctl.pageSize}
+            onPageSizeChange={ctl.setPageSize}
           />
         </div>
       )}
@@ -342,14 +372,33 @@ export function ProformasPage() {
   );
 }
 
-// ══════════════════════ Facturas vinculadas (cuadre informativo) ══════════════════════
-// La asociación se hace desde el editor de la factura (selector «Proforma») — una proforma se
-// paga con 1..N facturas; aquí solo se ve el cuadre. La generación automática por hitos existe
-// en el backend pero se retiró de la UI a petición del usuario (2026-08-03).
+// ══════════════════════ Facturas vinculadas + creación/generación ══════════════════════
+// Tres vías de asociación (una proforma se paga con 1..N facturas):
+//  1. "Crear factura": alta directa en borrador con los datos de la proforma y el importe elegido
+//     (por defecto, el pendiente) — el caso "llega la factura que paga la proforma".
+//  2. "Generar facturas": una factura por plazo de la FormaPago (restaurada 2026-08-03).
+//  3. Manual: desde el editor de la factura, selector «Proforma».
 
 function FacturasDialog({ state, onClose }: { state: EditorState; onClose: () => void }) {
   const isOpen = state.mode === "facturas";
   const item = isOpen ? state.item : undefined;
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  // Acceso directo a la factura: Facturas la abre por ?factura=<id> aunque esté
+  // en otra página del listado. Cerramos antes para no dejar el diálogo montado.
+  const openInvoice = (invoiceId: string) => {
+    onClose();
+    navigate(`/facturacion/facturas?factura=${encodeURIComponent(invoiceId)}`);
+  };
+  // Doble paso cuando ya hay facturas: primer clic arma la confirmación, el segundo genera.
+  const [confirmArmed, setConfirmArmed] = useState(false);
+  const [createAmount, setCreateAmount] = useState("");
+  useEffect(() => {
+    if (isOpen) {
+      setConfirmArmed(false);
+      setCreateAmount("");
+    }
+  }, [isOpen]);
 
   const linesQ = useQuery({
     queryKey: ["proformas", state.mode === "facturas" ? state.item.id : "none", "lines"],
@@ -358,6 +407,77 @@ function FacturasDialog({ state, onClose }: { state: EditorState; onClose: () =>
   });
 
   const lines = linesQ.data;
+  const hasInvoices = (lines?.invoices.length ?? 0) > 0;
+  // Importe propuesto: lo pendiente (o el total si aún no hay nada facturado).
+  const pendingSuggestion = lines && lines.pending > 0 ? lines.pending : null;
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["proformas"] });
+    queryClient.invalidateQueries({ queryKey: ["administration", "facturas"] });
+    queryClient.invalidateQueries({ queryKey: ["facturacion"] });
+  };
+
+  const generate = useMutation({
+    mutationFn: (id: string) => generateInvoicesFromProforma(id),
+    onSuccess: (ids) => {
+      toast.success(`${ids.length} factura(s) generadas en borrador`);
+      setConfirmArmed(false);
+      invalidateAll();
+    },
+    onError: (err) => toast.error("No se pudieron generar las facturas", { description: describe(err) }),
+  });
+
+  // Alta directa: borrador con los datos de la proforma (base/IVA proporcionales al importe),
+  // numerada {NumProforma}-{n} con el primer sufijo libre, y vinculada al momento.
+  const createOne = useMutation({
+    mutationFn: async (vars: { proforma: ProformaRow; amount: number }) => {
+      const { proforma, amount } = vars;
+      // Recibidas nacen sin número (borrador hasta que llegue la factura del proveedor);
+      // Emitidas se numeran {NumProforma}-{n} con el primer sufijo libre.
+      let number: string | null = null;
+      if (proforma.type === "Emitida") {
+        const existing = new Set((lines?.invoices ?? []).map((i) => i.number));
+        let n = (lines?.invoices.length ?? 0) + 1;
+        while (existing.has(`${proforma.number}-${n}`)) n++;
+        number = `${proforma.number}-${n}`;
+      }
+      const ratio = proforma.total !== 0 ? amount / proforma.total : 1;
+      const round2 = (x: number) => Math.round(x * 100) / 100;
+      const invoiceId = await createFactura({
+        type: proforma.type,
+        number,
+        total: round2(amount),
+        clientId: proforma.type === "Emitida" ? proforma.clientId : null,
+        supplierId: proforma.type === "Recibida" ? proforma.supplierId : null,
+        invoiceDate: `${new Date().toISOString().slice(0, 10)}T00:00:00Z`,
+        companyId: proforma.companyId,
+        societyId: proforma.societyId,
+        projectId: proforma.projectId,
+        taxBase: proforma.taxBase != null ? round2(proforma.taxBase * ratio) : null,
+        vat: proforma.vat != null ? round2(proforma.vat * ratio) : null,
+        paymentTerms: proforma.paymentTerms,
+      });
+      await linkInvoiceToProforma({ invoiceId, proformaId: proforma.id });
+      return invoiceId;
+    },
+    onSuccess: () => {
+      toast.success("Factura creada en borrador y vinculada", { description: "Edítala en Facturas si necesitas ajustar número o fechas." });
+      setCreateAmount("");
+      invalidateAll();
+    },
+    onError: (err) => toast.error("No se pudo crear la factura", { description: describe(err) }),
+  });
+
+  const onGenerate = () => {
+    if (!item) return;
+    if (hasInvoices && !confirmArmed) {
+      setConfirmArmed(true);
+      return;
+    }
+    generate.mutate(item.id);
+  };
+
+  const amountToCreate = toNumN(createAmount) ?? pendingSuggestion;
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => (!o ? onClose() : undefined)}>
@@ -398,7 +518,8 @@ function FacturasDialog({ state, onClose }: { state: EditorState; onClose: () =>
                 <p className="rounded-lg border border-dashed border-[var(--color-border)] px-3 py-6 text-center text-[13px] text-[var(--color-muted-foreground)]">
                   Sin facturas vinculadas todavía.
                   <span className="mt-1 block text-[12px]">
-                    Para asociar una: Facturas → edita la factura → selector «Proforma».
+                    Crea una aquí con los datos de la proforma, genera una por plazo, o asóciala a
+                    mano desde Facturas → editar → selector «Proforma».
                   </span>
                 </p>
               ) : (
@@ -416,10 +537,19 @@ function FacturasDialog({ state, onClose }: { state: EditorState; onClose: () =>
                       {lines.invoices.map((inv) => (
                         <tr key={inv.id}>
                           <td className="px-2.5 py-1.5 text-[12.5px] font-medium text-[var(--color-foreground)]">
-                            <span className="flex items-center gap-1.5">
-                              <FileText className="size-3.5 shrink-0 text-[var(--color-muted-foreground)]" />
-                              {inv.number}
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() => openInvoice(inv.id)}
+                              title="Abrir la factura en Facturas"
+                              aria-label={`Abrir la factura ${inv.number ?? "(sin número)"}`}
+                              className="group flex cursor-pointer items-center gap-1.5 rounded text-left text-[var(--color-foreground)] transition-colors hover:text-[var(--color-primary)]"
+                            >
+                              <FileText className="size-3.5 shrink-0 text-[var(--color-muted-foreground)] group-hover:text-[var(--color-primary)]" />
+                              <span className={"underline decoration-dotted underline-offset-2" + (inv.number ? "" : " italic text-[var(--color-muted-foreground)]")}>
+                                {inv.number ?? "(sin número)"}
+                              </span>
+                              <ArrowUpRight className="size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                            </button>
                           </td>
                           <td className="px-2.5 py-1.5 text-[12.5px] tabular-nums text-[var(--color-muted-foreground)]">
                             {inv.invoiceDate ? inv.invoiceDate.slice(0, 10) : "—"}
@@ -437,15 +567,85 @@ function FacturasDialog({ state, onClose }: { state: EditorState; onClose: () =>
                 </div>
               )}
 
+              {/* ── Crear factura con los datos de la proforma ── */}
+              {item && (
+                <div className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--color-border)] p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                      Crear factura desde la proforma
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-[var(--color-muted-foreground)]">
+                      Borrador con {item.type === "Emitida" ? "el cliente" : "el proveedor"}, empresa,
+                      proyecto y base/IVA proporcionales;{" "}
+                      {item.type === "Emitida"
+                        ? `se numera ${item.number}-n y queda vinculada.`
+                        : "queda sin número (ponlo al recibir la factura) y vinculada."}
+                    </p>
+                  </div>
+                  <div className="w-32">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={createAmount}
+                      onChange={(e) => setCreateAmount(e.target.value)}
+                      placeholder={pendingSuggestion != null ? fmtMoney(pendingSuggestion) : "Importe"}
+                      aria-label="Importe de la factura a crear"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={createOne.isPending || !amountToCreate || amountToCreate <= 0}
+                    title={!amountToCreate ? "Indica un importe (por defecto, el pendiente)." : undefined}
+                    onClick={() => amountToCreate && createOne.mutate({ proforma: item, amount: amountToCreate })}
+                    className="gap-1.5"
+                  >
+                    {createOne.isPending ? (
+                      <>
+                        <Loader2 className="size-3.5 animate-spin" />
+                        Creando…
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="size-3.5" />
+                        Crear factura
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {confirmArmed && (
+                <p className="rounded-lg border border-[oklch(from_var(--color-warning)_l_c_h_/_0.35)] bg-[oklch(from_var(--color-warning)_l_c_h_/_0.08)] px-3 py-2 text-[12.5px] text-[var(--color-foreground)]">
+                  Ya hay {lines.invoices.length} factura(s) vinculadas. Generar de nuevo creará facturas
+                  adicionales (una por plazo de la forma de pago). Pulsa otra vez para confirmar.
+                </p>
+              )}
             </>
           ) : null}
         </DialogBody>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" disabled={generate.isPending}>
               Cerrar
             </Button>
           </DialogClose>
+          <Button
+            onClick={onGenerate}
+            disabled={generate.isPending || !item || !item.paymentTerms}
+            title={!item?.paymentTerms ? "La proforma no tiene forma de pago (FormaPago)." : undefined}
+          >
+            {generate.isPending ? (
+              <>
+                <Loader2 className="mr-1.5 size-4 animate-spin" />
+                Generando…
+              </>
+            ) : confirmArmed ? (
+              "Confirmar generación"
+            ) : (
+              "Generar facturas"
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -580,7 +780,14 @@ function ProformaEditor({ state, onClose }: { state: EditorState; onClose: () =>
   const suppliersQ = useLookupOptions("suppliers", () => suppliersApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }), isOpen);
   const companiesQ = useLookupOptions("companies", () => companiesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }), isOpen);
   const societiesQ = useLookupOptions("societies", () => societiesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }), isOpen);
-  const statusesQ = useLookupOptions("statuses", () => statusesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }), isOpen);
+  // El catálogo de estados es polimórfico: cada formulario solo debe ver los de su contexto
+  // (ProformaEmitida / ProformaRecibida), nunca los de proyectos, facturas o movimientos.
+  const statusType = f.type === "Emitida" ? "ProformaEmitida" : "ProformaRecibida";
+  const statusesQ = useQuery({
+    queryKey: ["administration", "statuses", "options", statusType],
+    queryFn: () => statusesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc", type: statusType }),
+    enabled: isOpen,
+  });
   const projectsQ = useQuery({
     queryKey: ["projects", "options"],
     queryFn: () => searchProjects({ pageSize: 10000, sortBy: "name", sortDir: "asc" }),
@@ -620,15 +827,26 @@ function ProformaEditor({ state, onClose }: { state: EditorState; onClose: () =>
   const set = <K extends keyof ProformaForm>(k: K, v: ProformaForm[K]) => setF((s) => ({ ...s, [k]: v }));
 
   // Base/IVA/Total consistentes (21 % por defecto) — mismo comportamiento que el editor de facturas.
-  const [vatRate, setVatRate] = useState(21);
-  useEffect(() => {
-    if (isOpen) setVatRate(21);
-  }, [isOpen]);
   const num = (s: string): number => {
     const n = Number(s.replace(",", "."));
     return Number.isFinite(n) ? n : 0;
   };
   const fmt2 = (n: number): string => String(Math.round(n * 100) / 100);
+  // vatRateText es de UI (admite tipos personalizados, p.ej. 7,5); vatRate es el número derivado.
+  const [vatRateText, setVatRateText] = useState("21");
+  const vatRate = num(vatRateText);
+  useEffect(() => {
+    if (isOpen) setVatRateText("21");
+  }, [isOpen]);
+  const onVatRateChange = (rateText: string) => {
+    setVatRateText(rateText);
+    const rate = num(rateText);
+    setF((s) => {
+      if (s.taxBase.trim() === "" && s.total.trim() === "") return s;
+      const vat = fmt2(num(s.taxBase) * (rate / 100));
+      return { ...s, vat, total: fmt2(num(s.taxBase) + num(vat)) };
+    });
+  };
   const setAmount = (k: "taxBase" | "vat" | "total", v: string, rate = vatRate) =>
     setF((s) => {
       const next = { ...s, [k]: v };
@@ -647,7 +865,25 @@ function ProformaEditor({ state, onClose }: { state: EditorState; onClose: () =>
 
   const trimmedNumber = f.number.trim();
   const totalNum = toNumN(f.total);
-  const canSave = trimmedNumber.length > 0 && totalNum !== null;
+  // El servidor exige contraparte al crear (Emitida→cliente, Recibida→proveedor)
+  // y solo acepta códigos de forma de pago de su gramática: validamos aquí para
+  // no mandar la petición y comerse un 400 sin explicación. Al editar no se exige
+  // —igual que el validador de Update— para no bloquear datos heredados sin cliente.
+  const counterpartyOk = !!item || (f.type === "Emitida" ? !!f.clientId : !!f.supplierId);
+  const termsRaw = f.paymentTerms.trim();
+  const termsOk = termsRaw === "" || isValidPaymentTerms(termsRaw);
+  const canSave = trimmedNumber.length > 0 && totalNum !== null && counterpartyOk && termsOk;
+  const blockedReason = !trimmedNumber
+    ? "Falta el número."
+    : totalNum === null
+      ? "Falta el total."
+      : !counterpartyOk
+        ? f.type === "Emitida"
+          ? "Selecciona un cliente."
+          : "Selecciona un proveedor."
+        : !termsOk
+          ? "Revisa la forma de pago."
+          : undefined;
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -748,7 +984,8 @@ function ProformaEditor({ state, onClose }: { state: EditorState; onClose: () =>
                   variant="field"
                   value={f.type}
                   onChange={(v) =>
-                    setF((s) => ({ ...s, type: (v as FacturaType) ?? "Emitida", clientId: null, supplierId: null }))
+                    // El estado pertenece al tipo: al cambiarlo, el anterior deja de ser válido.
+                    setF((s) => ({ ...s, type: (v as FacturaType) ?? "Emitida", clientId: null, supplierId: null, statusId: null }))
                   }
                   options={TYPE_OPTIONS.map((t) => ({ value: t.value, label: t.label }))}
                   placeholder="Tipo"
@@ -777,7 +1014,7 @@ function ProformaEditor({ state, onClose }: { state: EditorState; onClose: () =>
               </Field>
 
               {f.type === "Emitida" ? (
-                <Field id="pf-client" label="Cliente">
+                <Field id="pf-client" label="Cliente" required={!item}>
                   <Combobox
                     id="pf-client"
                     label="Cliente"
@@ -789,10 +1026,11 @@ function ProformaEditor({ state, onClose }: { state: EditorState; onClose: () =>
                     clearable
                     placeholder={clientsQ.isLoading ? "Cargando…" : "Sin asignar"}
                     emptyOptionLabel="Sin asignar"
+                    emptyMessage="No hay clientes dados de alta."
                   />
                 </Field>
               ) : (
-                <Field id="pf-supplier" label="Proveedor">
+                <Field id="pf-supplier" label="Proveedor" required={!item}>
                   <Combobox
                     id="pf-supplier"
                     label="Proveedor"
@@ -804,6 +1042,7 @@ function ProformaEditor({ state, onClose }: { state: EditorState; onClose: () =>
                     clearable
                     placeholder={suppliersQ.isLoading ? "Cargando…" : "Sin asignar"}
                     emptyOptionLabel="Sin asignar"
+                    emptyMessage="No hay proveedores dados de alta."
                   />
                 </Field>
               )}
@@ -850,38 +1089,51 @@ function ProformaEditor({ state, onClose }: { state: EditorState; onClose: () =>
                   emptyOptionLabel="Sin asignar"
                 />
               </Field>
-              <Field id="pf-terms" label="Forma de pago" hint="Define los plazos al generar facturas (p.ej. 30PP70-60D).">
-                <Input id="pf-terms" value={f.paymentTerms} onChange={(e) => set("paymentTerms", e.target.value)} placeholder="60D, 30PP70-60D…" maxLength={32} />
+              <Field
+                id="pf-terms"
+                label="Forma de pago"
+                hint={termsOk ? "Define los plazos al generar facturas (p.ej. 30PP70-60D)." : PAYMENT_TERMS_HELP}
+              >
+                <Input
+                  id="pf-terms"
+                  value={f.paymentTerms}
+                  onChange={(e) => set("paymentTerms", e.target.value)}
+                  placeholder="60D, 30PP70-60D…"
+                  maxLength={32}
+                  aria-invalid={!termsOk}
+                />
               </Field>
               <Field id="pf-base" label="Base imponible">
-                <Input id="pf-base" type="number" step="0.01" value={f.taxBase} onChange={(e) => setAmount("taxBase", e.target.value)} placeholder="0.00" />
+                <Input id="pf-base" type="text" inputMode="decimal" value={f.taxBase} onChange={(e) => setAmount("taxBase", e.target.value)} placeholder="0.00" />
               </Field>
               <Field id="pf-vat" label="IVA">
                 <div className="flex gap-1.5">
-                  <select
-                    aria-label="Tipo de IVA"
-                    value={vatRate}
-                    onChange={(e) => {
-                      const rate = Number(e.target.value);
-                      setVatRate(rate);
-                      setF((s) => {
-                        if (s.taxBase.trim() === "" && s.total.trim() === "") return s;
-                        const vat = fmt2(num(s.taxBase) * (rate / 100));
-                        return { ...s, vat, total: fmt2(num(s.taxBase) + num(vat)) };
-                      });
-                    }}
-                    className="h-9 w-[74px] shrink-0 cursor-pointer rounded-lg border border-[var(--color-input)] bg-transparent px-2 text-[13px] text-[var(--color-foreground)] outline-none focus:border-[var(--color-primary)]"
-                  >
-                    <option value={21}>21 %</option>
-                    <option value={10}>10 %</option>
-                    <option value={4}>4 %</option>
-                    <option value={0}>0 %</option>
-                  </select>
-                  <Input id="pf-vat" type="number" step="0.01" value={f.vat} onChange={(e) => setAmount("vat", e.target.value)} placeholder="0.00" />
+                  <div className="relative w-[74px] shrink-0">
+                    <input
+                      aria-label="Tipo de IVA"
+                      type="text"
+                      inputMode="decimal"
+                      list="pf-vat-rate-options"
+                      value={vatRateText}
+                      onChange={(e) => onVatRateChange(e.target.value)}
+                      placeholder="21"
+                      className="h-9 w-full rounded-lg border border-[var(--color-input)] bg-transparent py-1 pl-2 pr-5 text-[13px] text-[var(--color-foreground)] outline-none focus:border-[var(--color-primary)]"
+                    />
+                    <span aria-hidden className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[12px] text-[var(--color-muted-foreground)]">
+                      %
+                    </span>
+                    <datalist id="pf-vat-rate-options">
+                      <option value="21" />
+                      <option value="10" />
+                      <option value="4" />
+                      <option value="0" />
+                    </datalist>
+                  </div>
+                  <Input id="pf-vat" type="text" inputMode="decimal" value={f.vat} onChange={(e) => setAmount("vat", e.target.value)} placeholder="0.00" />
                 </div>
               </Field>
               <Field id="pf-total" label="Total" required>
-                <Input id="pf-total" type="number" step="0.01" value={f.total} onChange={(e) => setAmount("total", e.target.value)} placeholder="0.00" required />
+                <Input id="pf-total" type="text" inputMode="decimal" value={f.total} onChange={(e) => setAmount("total", e.target.value)} placeholder="0.00" required />
               </Field>
 
               <Field id="pf-responsible" label="Responsable">
@@ -898,7 +1150,7 @@ function ProformaEditor({ state, onClose }: { state: EditorState; onClose: () =>
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={!canSave || save.isPending}>
+            <Button type="submit" disabled={!canSave || save.isPending} title={blockedReason}>
               {save.isPending ? "Guardando…" : item ? "Guardar" : "Crear"}
             </Button>
           </DialogFooter>

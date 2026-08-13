@@ -63,7 +63,7 @@ public sealed class SearchInvoicesQueryHandler(CashflowDbContext dbContext)
                     ? parsed
                     : null;
                 q = q.Where(i =>
-                    EF.Functions.ILike(i.Number, pattern) ||
+                    (i.Number != null && EF.Functions.ILike(i.Number, pattern)) ||
                     (i.DynamicsNumber != null && EF.Functions.ILike(i.DynamicsNumber, pattern)) ||
                     (i.Bank != null && EF.Functions.ILike(i.Bank, pattern)) ||
                     (i.Notes != null && EF.Functions.ILike(i.Notes, pattern)) ||

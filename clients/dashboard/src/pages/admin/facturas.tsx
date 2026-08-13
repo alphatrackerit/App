@@ -88,7 +88,8 @@ import {
   EntityStatusBadge,
   EntityColHeader,
   EntityFilterEmptyRow,
-  useTableControls,
+  useTableState,
+  useTableRows,
   Field,
   type ComboboxOption,
 } from "@/components/list";
@@ -175,8 +176,10 @@ function vfTone(s: VerifactuStatus): "success" | "danger" | "warning" | "info" |
 export function FacturasPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  // Sort/filtro por columna + paginación. Con un orden o filtro activo la
+  // consulta se ensancha al dataset completo y la tabla pagina en memoria.
+  const ctl = useTableState({ pageSize: PAGE_SIZE });
+  const { setPage } = ctl;
   const [editor, setEditor] = useState<EditorState>({ mode: "closed" });
   // "Empresas" de Facturación llega con ?empresa=<id> → listado filtrado por esa empresa.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -189,23 +192,54 @@ export function FacturasPage() {
   const soloCompanyName = soloCompanyId
     ? (soloCompanyQ.data?.items.find((c) => c.id === soloCompanyId)?.name ?? "…")
     : null;
-  useEffect(() => setPageNumber(1), [soloCompanyId]);
+  useEffect(() => setPage(1), [soloCompanyId, setPage]);
+
+  // Acceso directo desde otras pantallas (p. ej. «Facturas de la proforma»):
+  // ?factura=<id> abre el editor de esa factura aunque no esté en la página
+  // cargada — se pide por id. El parámetro se consume una vez y se limpia de la
+  // URL para que recargar no reabra el diálogo.
+  const deepLinkId = searchParams.get("factura");
+  const deepLinkQ = useQuery({
+    queryKey: ["administration", "facturas", "detail", deepLinkId],
+    queryFn: () => getFactura(deepLinkId as string),
+    enabled: !!deepLinkId,
+  });
+  const consumeDeepLink = () =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("factura");
+        return next;
+      },
+      { replace: true },
+    );
+  useEffect(() => {
+    if (!deepLinkId) return;
+    if (deepLinkQ.data) {
+      setEditor({ mode: "edit", item: deepLinkQ.data });
+      consumeDeepLink();
+    } else if (deepLinkQ.isError) {
+      toast.error("No se pudo abrir la factura", { description: describe(deepLinkQ.error) });
+      consumeDeepLink();
+    }
+    // consumeDeepLink es estable en la práctica (setSearchParams lo es).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkId, deepLinkQ.data, deepLinkQ.isError, deepLinkQ.error, setSearchParams]);
 
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search.trim());
-      setPageNumber(1);
+      setPage(1);
     }, 250);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, setPage]);
 
   const q = useQuery({
-    queryKey: ["administration", "facturas", { search: debouncedSearch, pageNumber, pageSize, companyId: soloCompanyId }],
+    queryKey: ["administration", "facturas", { search: debouncedSearch, ...ctl.fetch, companyId: soloCompanyId }],
     queryFn: () =>
       searchFacturas({
         search: debouncedSearch || undefined,
-        pageNumber,
-        pageSize,
+        ...ctl.fetch,
         sortDir: "desc",
         companyId: soloCompanyId ?? undefined,
       }),
@@ -249,19 +283,24 @@ export function FacturasPage() {
     it.type === "Emitida" ? nameOf(clientsQ.data?.items, it.clientId) : nameOf(suppliersQ.data?.items, it.supplierId);
 
   const data = q.data;
-  const ctl = useTableControls(data?.items ?? [], {
-    numero: (it) => it.number,
-    tipo: (it) => it.type,
-    contraparte: (it) => counterparty(it),
-    empresa: (it) => nameOf(companiesQ.data?.items, it.companyId),
-    proyecto: (it) => nameOf(projectsQ.data?.items, it.projectId),
-    fecha: (it) => it.invoiceDate,
-    vencimiento: (it) => it.dueDate,
-    total: (it) => it.total,
-    pendiente: (it) => it.total - it.collected,
-    cobro: (it) => (it.total > 0 ? it.collected / it.total : 0),
-  });
-  const items = ctl.rows;
+  const view = useTableRows(
+    data?.items ?? [],
+    {
+      numero: (it) => it.number,
+      tipo: (it) => it.type,
+      contraparte: (it) => counterparty(it),
+      empresa: (it) => nameOf(companiesQ.data?.items, it.companyId),
+      proyecto: (it) => nameOf(projectsQ.data?.items, it.projectId),
+      fecha: (it) => it.invoiceDate,
+      vencimiento: (it) => it.dueDate,
+      total: (it) => it.total,
+      pendiente: (it) => it.total - it.collected,
+      cobro: (it) => (it.total > 0 ? it.collected / it.total : 0),
+    },
+    ctl,
+    data,
+  );
+  const items = view.rows;
   const searchActive = debouncedSearch.length > 0;
   // Con filtros de columna activos la tabla sigue montada aunque no haya filas,
   // para que la cabecera (y sus filtros) siga accesible y se puedan cambiar/limpiar.
@@ -272,7 +311,7 @@ export function FacturasPage() {
       <EntityPageHeader
         icon={FileText}
         title="Facturas"
-        total={data?.totalCount ?? null}
+        total={view.totalCount}
         unit="factura"
         description="Facturas emitidas y recibidas, con sus líneas de flujo de caja."
       >
@@ -356,10 +395,10 @@ export function FacturasPage() {
                   e.preventDefault();
                   setEditor({ mode: "edit", item: it });
                 }}
-                aria-label={`Editar factura ${it.number}`}
+                aria-label={`Editar factura ${it.number ?? "(sin número)"}`}
               >
                 <div className="min-w-0">
-                  <p className="truncate text-[14px] font-medium text-[var(--color-foreground)]">{it.number || "—"}</p>
+                  <p className="truncate text-[14px] font-medium text-[var(--color-foreground)]">{it.number || "(sin número)"}</p>
                   <p className="truncate text-[12px] text-[var(--color-muted-foreground)]">
                     {`${it.type} · ${counterparty(it)} · ${it.invoiceDate ? it.invoiceDate.slice(0, 10) : "—"} · ${fmtMoney(it.total)}`}
                   </p>
@@ -401,7 +440,7 @@ export function FacturasPage() {
             {items.map((it, i) => (
               <EntityListRow key={it.id} className={cols} isLast={i === items.length - 1}>
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-[14px] font-medium text-[var(--color-foreground)]">{it.number || "—"}</span>
+                  <span className="truncate text-[14px] font-medium text-[var(--color-foreground)]">{it.number || "(sin número)"}</span>
                   {it.verified && (
                     <ShieldCheck className="size-3.5 shrink-0 text-[var(--color-primary)]" aria-label="Verificada" />
                   )}
@@ -451,7 +490,7 @@ export function FacturasPage() {
                 <div className="flex items-center justify-end gap-1">
                   <button
                     type="button"
-                    aria-label={`Vincular líneas de la factura ${it.number}`}
+                    aria-label={`Vincular líneas de la factura ${it.number ?? "(sin número)"}`}
                     onClick={() => setEditor({ mode: "lines", item: it })}
                     className="grid size-7 cursor-pointer place-items-center rounded-md text-[var(--color-muted-foreground)] opacity-0 transition-all hover:bg-[var(--color-muted)] hover:text-[var(--color-primary)] group-hover:opacity-100"
                   >
@@ -459,7 +498,7 @@ export function FacturasPage() {
                   </button>
                   <button
                     type="button"
-                    aria-label={`Editar factura ${it.number}`}
+                    aria-label={`Editar factura ${it.number ?? "(sin número)"}`}
                     onClick={() => setEditor({ mode: "edit", item: it })}
                     className="grid size-7 cursor-pointer place-items-center rounded-md text-[var(--color-muted-foreground)] opacity-0 transition-all hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] group-hover:opacity-100"
                   >
@@ -467,7 +506,7 @@ export function FacturasPage() {
                   </button>
                   <button
                     type="button"
-                    aria-label={`Vencimientos de la factura ${it.number}`}
+                    aria-label={`Vencimientos de la factura ${it.number ?? "(sin número)"}`}
                     onClick={() => setEditor({ mode: "vencimientos", item: it })}
                     className="grid size-7 cursor-pointer place-items-center rounded-md text-[var(--color-muted-foreground)] opacity-0 transition-all hover:bg-[var(--color-muted)] hover:text-[var(--color-primary)] group-hover:opacity-100"
                   >
@@ -475,7 +514,7 @@ export function FacturasPage() {
                   </button>
                   <button
                     type="button"
-                    aria-label={`Borrar factura ${it.number}`}
+                    aria-label={`Borrar factura ${it.number ?? "(sin número)"}`}
                     onClick={() => setEditor({ mode: "delete", item: it })}
                     className="grid size-7 cursor-pointer place-items-center rounded-md text-[var(--color-muted-foreground)] opacity-0 transition-all hover:bg-[var(--color-muted)] hover:text-[var(--color-destructive)] group-hover:opacity-100"
                   >
@@ -487,17 +526,14 @@ export function FacturasPage() {
           </EntityListCard>
 
           <EntityPager
-            page={data?.pageNumber ?? 1}
-            totalPages={data?.totalPages ?? 1}
-            hasPrev={!!data?.hasPrevious}
-            hasNext={!!data?.hasNext}
-            onPrev={() => setPageNumber((p) => Math.max(1, p - 1))}
-            onNext={() => setPageNumber((p) => p + 1)}
-            pageSize={pageSize}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPageNumber(1);
-            }}
+            page={ctl.page}
+            totalPages={view.totalPages}
+            hasPrev={view.hasPrev}
+            hasNext={view.hasNext}
+            onPrev={() => setPage(ctl.page - 1)}
+            onNext={() => setPage(ctl.page + 1)}
+            pageSize={ctl.pageSize}
+            onPageSizeChange={ctl.setPageSize}
           />
         </div>
       )}
@@ -604,7 +640,7 @@ function ReportesDialog({ state, onClose }: { state: EditorState; onClose: () =>
     const header = ["Número", "Tipo", "Cliente/Proveedor", "Empresa", "Fecha", "Vencimiento", "Total", "Cobrado/Pagado", "Pendiente", "Días vencida", "Situación"];
     const lines = rows.map((r) =>
       [
-        r.number,
+        r.number ?? "(sin número)",
         r.type,
         r.counterpartyName ?? "",
         r.companyName ?? "",
@@ -635,7 +671,7 @@ function ReportesDialog({ state, onClose }: { state: EditorState; onClose: () =>
     const rowsHtml = rows
       .map(
         (r) => `<tr>
-          <td>${r.number}</td><td>${r.type}</td><td>${r.counterpartyName ?? "—"}</td><td>${r.companyName ?? "—"}</td>
+          <td>${r.number ?? "(sin número)"}</td><td>${r.type}</td><td>${r.counterpartyName ?? "—"}</td><td>${r.companyName ?? "—"}</td>
           <td>${r.invoiceDate ? r.invoiceDate.slice(0, 10) : "—"}</td><td>${r.dueDate ? r.dueDate.slice(0, 10) : "—"}</td>
           <td class="num">${fmtMoney(r.total)}</td><td class="num">${fmtMoney(r.collected)}</td><td class="num">${fmtMoney(r.pending)}</td>
           <td>${statusLabel(r)}</td></tr>`,
@@ -785,7 +821,7 @@ function ReportesDialog({ state, onClose }: { state: EditorState; onClose: () =>
                   {rows.map((r) => (
                     <tr key={r.id}>
                       <td className="px-2.5 py-1.5 font-medium text-[var(--color-foreground)]">
-                        {r.number}
+                        {r.number ?? "(sin número)"}
                         <span className="ml-1.5 text-[11px] font-normal text-[var(--color-muted-foreground)]">{r.type}</span>
                       </td>
                       <td className="max-w-[220px] truncate px-2.5 py-1.5 text-[var(--color-muted-foreground)]" title={r.counterpartyName ?? undefined}>
@@ -1155,7 +1191,7 @@ function VencimientosDialog({ state, onClose }: { state: EditorState; onClose: (
         percentage: vars.percentage,
         invoiceId: vars.invoice.id,
         projectId: vars.invoice.projectId,
-        description: `Vencimiento ${vars.invoice.number}`,
+        description: `Vencimiento ${vars.invoice.number ?? "(sin número)"}`,
       };
       return vars.invoice.type === "Emitida"
         ? createIncome(base)
@@ -1179,7 +1215,7 @@ function VencimientosDialog({ state, onClose }: { state: EditorState; onClose: (
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarClock className="size-4 text-[var(--color-primary)]" />
-            Vencimientos de {item?.number}
+            Vencimientos de {item?.number ?? "(sin número)"}
           </DialogTitle>
           <DialogDescription>
             Ajusta fecha, porcentaje o importe de cada plazo y márcalo como {paidWord} cuando se liquide.
@@ -1460,7 +1496,7 @@ function LineasDialog({ state, onClose }: { state: EditorState; onClose: () => v
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Link2 className="size-4 text-[var(--color-primary)]" />
-            Líneas de {item?.number}
+            Líneas de {item?.number ?? "(sin número)"}
           </DialogTitle>
           <DialogDescription>
             {item?.type === "Emitida" ? "Ingresos" : "Pagos"} de caja vinculados a esta factura.
@@ -1603,7 +1639,7 @@ function DeleteDialog({ state, onClose }: { state: EditorState; onClose: () => v
           <DialogTitle className="text-[var(--color-destructive)]">Borrar factura</DialogTitle>
           <DialogDescription>
             Esto elimina permanentemente la factura{" "}
-            <span className="font-medium text-[var(--color-foreground)]">{item?.number}</span>.
+            <span className="font-medium text-[var(--color-foreground)]">{item?.number ?? "(sin número)"}</span>.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -1697,7 +1733,7 @@ function FacturaEditor({
         item
           ? {
               type: item.type,
-              number: item.number,
+              number: item.number ?? "",
               dynamicsNumber: item.dynamicsNumber ?? "",
               total: item.total != null ? String(item.total) : "",
               taxBase: item.taxBase != null ? String(item.taxBase) : "",
@@ -1719,13 +1755,13 @@ function FacturaEditor({
             }
           : BLANK,
       );
-      // Selector de tipo de IVA: inferir el más cercano a partir de los importes guardados.
+      // Selector de tipo de IVA: mostrar el tipo real a partir de los importes guardados
+      // (admite tipos personalizados, no solo 21/10/4/0).
       if (item && item.taxBase != null && item.taxBase !== 0 && item.vat != null) {
         const actual = (item.vat / item.taxBase) * 100;
-        const closest = [21, 10, 4, 0].reduce((a, b) => (Math.abs(b - actual) < Math.abs(a - actual) ? b : a));
-        setVatRate(closest);
+        setVatRateText(String(Math.round(actual * 100) / 100));
       } else {
-        setVatRate(21);
+        setVatRateText("21");
       }
     }
   }, [isOpen, item]);
@@ -1813,7 +1849,7 @@ function FacturaEditor({
     onError: (err) => toast.error("No se pudo emitir con VeriFactu", { description: describe(err) }),
   });
   const pdf = useMutation({
-    mutationFn: (vars: { id: string; number: string }) => downloadFacturaPdf(vars.id, vars.number),
+    mutationFn: (vars: { id: string; number: string | null }) => downloadFacturaPdf(vars.id, vars.number),
     onError: (err) => toast.error("No se pudo descargar el PDF", { description: describe(err) }),
   });
 
@@ -1860,7 +1896,14 @@ function FacturaEditor({
   const suppliersQ = useLookupOptions("suppliers", () => suppliersApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }), isOpen);
   const companiesQ = useLookupOptions("companies", () => companiesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }), isOpen);
   const societiesQ = useLookupOptions("societies", () => societiesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }), isOpen);
-  const statusesQ = useLookupOptions("statuses", () => statusesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc" }), isOpen);
+  // El catálogo de estados es polimórfico: cada formulario solo debe ver los de su contexto
+  // (FacturaEmitida / FacturaRecibida), nunca los de proyectos, proformas o movimientos.
+  const statusType = f.type === "Emitida" ? "FacturaEmitida" : "FacturaRecibida";
+  const statusesQ = useQuery({
+    queryKey: ["administration", "statuses", "options", statusType],
+    queryFn: () => statusesApi.search({ pageSize: 10000, sortBy: "name", sortDir: "asc", type: statusType }),
+    enabled: isOpen,
+  });
   const projectsQ = useQuery({
     queryKey: ["projects", "options"],
     queryFn: () => searchProjects({ pageSize: 10000, sortBy: "name", sortDir: "asc" }),
@@ -1904,7 +1947,7 @@ function FacturaEditor({
           percentage: pct,
           invoiceId: id,
           projectId: input.projectId,
-          description: `Vencimiento ${input.number}`,
+          description: `Vencimiento ${input.number ?? "(sin número)"}`,
         };
         if (input.type === "Emitida") await createIncome(base);
         else await createPayment({ ...base, supplierId: input.supplierId });
@@ -1936,12 +1979,14 @@ function FacturaEditor({
   //   · editar el total → base = total ÷ (1 + tipo), IVA = total − base
   //   · editar el importe de IVA a mano → solo recalcula el total (base + IVA)
   // Campo vacío cuenta como 0. vatRate es solo de UI; en la BD se guarda el importe.
-  const [vatRate, setVatRate] = useState(21);
   const num = (s: string): number => {
     const n = Number(s.replace(",", "."));
     return Number.isFinite(n) ? n : 0;
   };
   const fmt2 = (n: number): string => String(Math.round(n * 100) / 100);
+  // vatRateText es de UI (admite tipos personalizados, p.ej. 7,5); vatRate es el número derivado.
+  const [vatRateText, setVatRateText] = useState("21");
+  const vatRate = num(vatRateText);
   const setAmount = (k: "taxBase" | "vat" | "total", v: string, rate = vatRate) =>
     setF((s) => {
       const next = { ...s, [k]: v };
@@ -1957,8 +2002,9 @@ function FacturaEditor({
       }
       return next;
     });
-  const onVatRateChange = (rate: number) => {
-    setVatRate(rate);
+  const onVatRateChange = (rateText: string) => {
+    setVatRateText(rateText);
+    const rate = num(rateText);
     setF((s) => {
       if (s.taxBase.trim() === "" && s.total.trim() === "") return s;
       const vat = fmt2(num(s.taxBase) * (rate / 100));
@@ -2023,14 +2069,16 @@ function FacturaEditor({
   const plazosDiff = Math.round(((totalNum ?? 0) - sumPlazos) * 100) / 100;
   const plazosComplete = plazos.every((p) => p.date && toNumN(p.amount) !== null);
   const plazosOk = plazos.length === 0 || (plazosComplete && Math.abs(plazosDiff) < 0.005);
-  const canSave = trimmedNumber.length > 0 && totalNum !== null && (!!item || plazosOk);
+  // El número solo es obligatorio en Emitidas; las Recibidas pueden quedar en borrador sin número.
+  const numberOk = f.type === "Recibida" || trimmedNumber.length > 0;
+  const canSave = numberOk && totalNum !== null && (!!item || plazosOk);
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!canSave) return;
     const input: FacturaInput = {
       type: f.type,
-      number: trimmedNumber,
+      number: trimmedNumber || null,
       total: totalNum ?? 0,
       clientId: f.type === "Emitida" ? f.clientId : null,
       supplierId: f.type === "Recibida" ? f.supplierId : null,
@@ -2207,15 +2255,24 @@ function FacturaEditor({
                   variant="field"
                   value={f.type}
                   onChange={(v) =>
-                    setF((s) => ({ ...s, type: (v as FacturaType) ?? "Emitida", clientId: null, supplierId: null }))
+                    // El estado pertenece al tipo: al cambiarlo, el anterior deja de ser válido.
+                    setF((s) => ({ ...s, type: (v as FacturaType) ?? "Emitida", clientId: null, supplierId: null, statusId: null }))
                   }
                   options={TYPE_OPTIONS.map((t) => ({ value: t.value, label: t.label }))}
                   placeholder="Tipo"
                   disabled={!!item}
                 />
               </Field>
-              <Field id="fa-number" label="Número" required>
-                <Input id="fa-number" value={f.number} onChange={(e) => set("number", e.target.value)} placeholder="Nº factura" autoFocus required maxLength={128} />
+              <Field id="fa-number" label="Número" required={f.type === "Emitida"} hint={f.type === "Recibida" ? "Opcional en recibidas: déjalo en blanco hasta recibir la factura." : undefined}>
+                <Input
+                  id="fa-number"
+                  value={f.number}
+                  onChange={(e) => set("number", e.target.value)}
+                  placeholder={f.type === "Recibida" ? "Nº factura (opcional)" : "Nº factura"}
+                  autoFocus
+                  required={f.type === "Emitida"}
+                  maxLength={128}
+                />
               </Field>
               <Field id="fa-dyn" label="Nº Dynamics">
                 <Input id="fa-dyn" value={f.dynamicsNumber} onChange={(e) => set("dynamicsNumber", e.target.value)} placeholder="Opcional" maxLength={128} />
@@ -2308,7 +2365,7 @@ function FacturaEditor({
                   emptyOptionLabel="Sin asignar"
                 />
               </Field>
-              <Field id="fa-proforma" label="Proforma" hint="Vinculación manual (opcional).">
+              <Field id="fa-proforma" label="Proforma" hint={`Vinculación manual (opcional). Solo proformas de tipo ${f.type}.`}>
                 <Combobox
                   id="fa-proforma"
                   label="Proforma"
@@ -2322,30 +2379,49 @@ function FacturaEditor({
                   clearable
                   placeholder={proformasQ.isLoading ? "Cargando…" : "Sin vincular"}
                   emptyOptionLabel="Sin vincular"
+                  // Una factura solo puede venir de una proforma del mismo tipo, así que
+                  // la lista puede salir vacía aunque haya proformas del otro tipo.
+                  emptyMessage={
+                    proformasQ.isLoading
+                      ? "Cargando proformas…"
+                      : `No hay proformas de tipo ${f.type}${
+                          (proformasQ.data?.items ?? []).length > 0 ? " (sí las hay del otro tipo)" : ""
+                        }.`
+                  }
                 />
               </Field>
 
               <Field id="fa-base" label="Base imponible">
-                <Input id="fa-base" type="number" step="0.01" value={f.taxBase} onChange={(e) => setAmount("taxBase", e.target.value)} placeholder="0.00" />
+                <Input id="fa-base" type="text" inputMode="decimal" value={f.taxBase} onChange={(e) => setAmount("taxBase", e.target.value)} placeholder="0.00" />
               </Field>
               <Field id="fa-vat" label="IVA">
                 <div className="flex gap-1.5">
-                  <select
-                    aria-label="Tipo de IVA"
-                    value={vatRate}
-                    onChange={(e) => onVatRateChange(Number(e.target.value))}
-                    className="h-9 w-[74px] shrink-0 cursor-pointer rounded-lg border border-[var(--color-input)] bg-transparent px-2 text-[13px] text-[var(--color-foreground)] outline-none focus:border-[var(--color-primary)]"
-                  >
-                    <option value={21}>21 %</option>
-                    <option value={10}>10 %</option>
-                    <option value={4}>4 %</option>
-                    <option value={0}>0 %</option>
-                  </select>
-                  <Input id="fa-vat" type="number" step="0.01" value={f.vat} onChange={(e) => setAmount("vat", e.target.value)} placeholder="0.00" />
+                  <div className="relative w-[74px] shrink-0">
+                    <input
+                      aria-label="Tipo de IVA"
+                      type="text"
+                      inputMode="decimal"
+                      list="fa-vat-rate-options"
+                      value={vatRateText}
+                      onChange={(e) => onVatRateChange(e.target.value)}
+                      placeholder="21"
+                      className="h-9 w-full rounded-lg border border-[var(--color-input)] bg-transparent py-1 pl-2 pr-5 text-[13px] text-[var(--color-foreground)] outline-none focus:border-[var(--color-primary)]"
+                    />
+                    <span aria-hidden className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[12px] text-[var(--color-muted-foreground)]">
+                      %
+                    </span>
+                    <datalist id="fa-vat-rate-options">
+                      <option value="21" />
+                      <option value="10" />
+                      <option value="4" />
+                      <option value="0" />
+                    </datalist>
+                  </div>
+                  <Input id="fa-vat" type="text" inputMode="decimal" value={f.vat} onChange={(e) => setAmount("vat", e.target.value)} placeholder="0.00" />
                 </div>
               </Field>
               <Field id="fa-total" label="Total" required>
-                <Input id="fa-total" type="number" step="0.01" value={f.total} onChange={(e) => setAmount("total", e.target.value)} placeholder="0.00" required />
+                <Input id="fa-total" type="text" inputMode="decimal" value={f.total} onChange={(e) => setAmount("total", e.target.value)} placeholder="0.00" required />
               </Field>
 
               <Field id="fa-date" label="Fecha factura">

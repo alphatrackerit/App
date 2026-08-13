@@ -78,6 +78,11 @@ export function formatMoney(amount: number, currency: string) {
 // in toast descriptions during development.
 export function describe(err: unknown): string {
   if (err instanceof ApiRequestError) {
+    // Un 400 de FluentValidation lleva el motivo real en `errors`; su `detail`
+    // es siempre el mismo texto genérico y no dice qué campo falla.
+    const fieldErrors = Object.values(err.problem?.errors ?? {}).flat();
+    if (fieldErrors.length > 0) return `${err.status} ${fieldErrors.join(" · ")}`;
+
     const reason =
       err.problem?.reason ??
       err.problem?.detail ??

@@ -55,7 +55,8 @@ export type ProformaInput = {
 // One invoice generated from / linked to the proforma.
 export type ProformaInvoiceDto = {
   id: string;
-  number: string;
+  /** Nulo en facturas recibidas en borrador (sin número todavía). */
+  number: string | null;
   invoiceDate: string | null;
   dueDate: string | null;
   total: number;
@@ -82,7 +83,12 @@ export type SearchProformasParams = {
   supplierId?: string;
   companyId?: string;
   projectId?: string;
+  /** Filtro de trabajo pendiente de facturación. */
+  pending?: ProformaPendingFilter;
 };
+
+/** Proformas con trabajo de facturación pendiente. */
+export type ProformaPendingFilter = "SinFactura" | "FacturasSinNumero" | "ParcialmenteFacturada";
 
 function proformaQuery(params: Record<string, string | number | undefined | null>): string {
   const q = new URLSearchParams();

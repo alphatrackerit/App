@@ -15,6 +15,6 @@ public sealed class UpdateProformaCommandValidator : AbstractValidator<UpdatePro
         RuleFor(x => x.PaymentTerms!)
             .Must(pt => PaymentTerms.TryParse(pt, out _))
             .When(x => !string.IsNullOrWhiteSpace(x.PaymentTerms))
-            .WithMessage("Unrecognized payment-terms code.");
+            .WithMessage("Forma de pago no reconocida (p. ej. 60D, 100PP, 30PP70-60D, DOMICILIADO).");
     }
 }

@@ -13,7 +13,9 @@ namespace FSH.Modules.Cashflow.Domain;
 /// </summary>
 public sealed class Invoice : AggregateRoot<Guid>
 {
-    public string Number { get; private set; } = default!;
+    /// <summary>Fiscal number. Required for Emitidas (VeriFactu hashes it); nullable for Recibidas
+    /// so a draft generated from a proforma can exist before the supplier's invoice arrives.</summary>
+    public string? Number { get; private set; }
     public string? DynamicsNumber { get; private set; }
     public InvoiceType Type { get; private set; }
 
@@ -120,7 +122,7 @@ public sealed class Invoice : AggregateRoot<Guid>
 
     /// <summary>Creates a received (Recibida) invoice — one tied to a supplier, driving Payments.</summary>
     public static Invoice Received(
-        string number,
+        string? number,
         Guid supplierId,
         decimal total,
         DateTime? invoiceDate = null,
@@ -135,11 +137,10 @@ public sealed class Invoice : AggregateRoot<Guid>
         string? notes = null,
         Guid? projectId = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(number);
         return new Invoice
         {
             Id = Guid.CreateVersion7(),
-            Number = number.Trim(),
+            Number = string.IsNullOrWhiteSpace(number) ? null : number.Trim(),
             Type = InvoiceType.Recibida,
             SupplierId = supplierId,
             ProjectId = projectId,
@@ -160,7 +161,7 @@ public sealed class Invoice : AggregateRoot<Guid>
     /// <summary>Updates the editable header fields. <see cref="Type"/> and the counterparty side are
     /// immutable once created — a mistyped side is deleted and recreated, not mutated.</summary>
     public void Update(
-        string number,
+        string? number,
         decimal total,
         DateTime? invoiceDate,
         DateTime? dueDate,
@@ -177,9 +178,13 @@ public sealed class Invoice : AggregateRoot<Guid>
         string? notes,
         Guid? projectId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(number);
+        if (Type == InvoiceType.Emitida)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(number);
+        }
+
         EnsureNotVerifactuRegistered();
-        Number = number.Trim();
+        Number = string.IsNullOrWhiteSpace(number) ? null : number.Trim();
         Total = total;
         InvoiceDate = NormalizeDate(invoiceDate);
         DueDate = NormalizeDate(dueDate);

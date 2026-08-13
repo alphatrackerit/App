@@ -6,7 +6,12 @@ import { describe } from "@/lib/list-helpers";
 import type { CobroEstado, VencimientoEstado } from "./data";
 
 export function EstadoVencimientoBadge({ estado }: { estado: VencimientoEstado }) {
-  const tone = estado === "Pagada" ? "success" : estado === "Vencido" ? "danger" : estado === "Parcial" ? "warning" : "default";
+  const tone =
+    estado === "Pagada" ? "success"
+    : estado === "Vencido" ? "danger"
+    : estado === "Parcial" ? "warning"
+    : estado === "Previsto" ? "info"
+    : "default";
   return <EntityStatusBadge tone={tone}>{estado}</EntityStatusBadge>;
 }
 

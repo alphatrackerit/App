@@ -1,5 +1,6 @@
 using FSH.Framework.Shared.Persistence;
 using FSH.Modules.Cashflow.Contracts.Dtos;
+using FSH.Modules.Cashflow.Contracts.Enums;
 using FSH.Modules.Cashflow.Contracts.v1.Proformas;
 using FSH.Modules.Cashflow.Data;
 using FSH.Modules.Cashflow.Domain;
@@ -45,6 +46,19 @@ public sealed class SearchProformasQueryHandler(CashflowDbContext dbContext)
         {
             q = q.Where(p => p.ProjectId == query.ProjectId.Value);
         }
+
+        // Pending-work filters run BEFORE count/pagination so TotalCount reflects them.
+        q = query.Pending switch
+        {
+            ProformaPendingFilter.SinFactura =>
+                q.Where(p => !dbContext.Invoices.Any(i => i.ProformaId == p.Id)),
+            ProformaPendingFilter.FacturasSinNumero =>
+                q.Where(p => dbContext.Invoices.Any(i => i.ProformaId == p.Id && i.Number == null)),
+            ProformaPendingFilter.ParcialmenteFacturada =>
+                q.Where(p => dbContext.Invoices.Any(i => i.ProformaId == p.Id)
+                    && dbContext.Invoices.Where(i => i.ProformaId == p.Id).Sum(i => i.Total) < p.Total),
+            _ => q,
+        };
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {

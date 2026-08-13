@@ -84,7 +84,7 @@ public sealed class IssueInvoiceVerifactuCommandHandler(
         var generatedAt = DateTimeOffset.Now;
         var result = chainService.BuildRecord(
             new VerifactuChainInput(
-                company.Nif, invoice.Number, invoiceDate,
+                company.Nif, invoice.Number!, invoiceDate,
                 invoice.Vat ?? 0m, invoice.Total,
                 settings.LastChainHash, generatedAt),
             settings.Environment);

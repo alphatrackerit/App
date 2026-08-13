@@ -19,6 +19,8 @@ namespace FSH.Modules.Cashflow.Contracts.v1.Proformas;
 /// <param name="SupplierId">When set, only proformas of this supplier.</param>
 /// <param name="CompanyId">When set, only proformas belonging to this company.</param>
 /// <param name="ProjectId">When set, only proformas assigned to this project.</param>
+/// <param name="Pending">When set, only proformas with pending invoicing work (no invoice, draft
+/// numberless invoices, or partially invoiced).</param>
 public sealed record SearchProformasQuery(
     string? Search = null,
     int PageNumber = 1,
@@ -29,4 +31,5 @@ public sealed record SearchProformasQuery(
     Guid? ClientId = null,
     Guid? SupplierId = null,
     Guid? CompanyId = null,
-    Guid? ProjectId = null) : IQuery<PagedResponse<ProformaDto>>;
+    Guid? ProjectId = null,
+    ProformaPendingFilter? Pending = null) : IQuery<PagedResponse<ProformaDto>>;
